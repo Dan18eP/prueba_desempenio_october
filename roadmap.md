@@ -64,16 +64,16 @@ Este documento sirve como el tablero de control de avance técnico para garantiz
 ---
 
 ### Fase 3: Machine Learning de Anomalías & Reporte Diario con IA
-- [ ] Crear `airflow/include/anomaly_detection.py`:
-  - [ ] Algoritmo Z-Score sobre magnitudes y tasa de frecuencia horaria ($Z > 2.5$).
-  - [ ] Detección de enjambres sísmicos con explicación breve y determinística.
-- [ ] Crear `airflow/include/prompts/daily_summary_v1.txt` (prompt versionado con esquema Pydantic).
-- [ ] Crear `airflow/dags/dag_daily_ai_report.py`:
-  - [ ] Ejecución diaria programada.
-  - [ ] Cifras calculadas previamente con SQL en `curated.gold_hourly_kpis` (Ground Truth).
-  - [ ] Inferencia con Motor Dual de IA.
-  - [ ] Aserción matemática de coincidencia entre números del texto y SQL.
-  - [ ] Registro en `audit.ai_executions` y persistencia en `curated.gold_ai_reports`.
+- [x] Crear `airflow/include/anomaly_detection.py`:
+  - [x] Algoritmo Z-Score sobre magnitudes y tasa de frecuencia horaria ($Z > 2.5$).
+  - [x] Detección de enjambres sísmicos con explicación breve y determinística.
+- [x] Crear `airflow/include/prompts/daily_summary_v1.txt` (prompt versionado con esquema Pydantic).
+- [x] Crear `airflow/dags/dag_daily_ai_report.py`:
+  - [x] Ejecución diaria programada.
+  - [x] Cifras calculadas previamente con SQL en `curated.gold_hourly_kpis` (Ground Truth).
+  - [x] Inferencia con Motor Dual de IA.
+  - [x] Aserción matemática de coincidencia entre números del texto y SQL.
+  - [x] Registro en `audit.ai_executions` y persistencia en `curated.gold_ai_reports`.
 
 ---
 
