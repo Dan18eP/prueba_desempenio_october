@@ -1,0 +1,54 @@
+# ==============================================================================
+# SismoWatch - Official Full OpenMetadata Stack (Enterprise High-RAM Profile)
+# Use only on machines with >= 16 GB of free RAM:
+# docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml up -d
+# ==============================================================================
+services:
+  opensearch:
+    image: opensearchproject/opensearch:2.14.0
+    container_name: sismowatch_opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    networks:
+      - sismowatch-net
+
+  openmetadata-server:
+    image: docker.get-openmetadata.org/openmetadata/server:1.5.0
+    container_name: sismowatch_openmetadata_server
+    depends_on:
+      - opensearch
+      - postgres
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres_master_secret_2026}
+      DB_SCHEMA: sismowatch
+      SEARCH_TYPE: opensearch
+      SEARCH_HOST: opensearch
+      SEARCH_PORT: 9200
+    ports:
+      - "8586:8585"
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    networks:
+      - sismowatch-net

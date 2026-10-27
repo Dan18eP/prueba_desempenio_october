@@ -14,26 +14,26 @@ Este documento sirve como el tablero de control de avance técnico para garantiz
 ## 📌 Checklist de Fases
 
 ### Fase 1: Infraestructura Base & Modelo Relacional
-- [ ] Crear plantilla de entorno segura [`.env.example`](file:///home/Coder/Documentos/DanielE/PRUEBA_DESEMPENIO_OCTUBRE/.env.example) con Fernet Key, secrets JWT y configuración sin secretos quemados.
-- [ ] Crear [`docker-compose.yml`](file:///home/Coder/Documentos/DanielE/PRUEBA_DESEMPENIO_OCTUBRE/docker-compose.yml) unificado con límites de memoria (`mem_limit`):
-  - [ ] Servicio `postgres:16-alpine` (puerto `5432:5432`) con persistencia.
-  - [ ] Servicio `minio` (puertos `9000:9000` y `9001:9001`) para Lakehouse.
-  - [ ] Servicio `minio-init` para crear bucket `sismowatch-lake`.
-  - [ ] Servicios Airflow (`airflow-init`, `airflow-webserver` `:8080`, `airflow-scheduler`).
-  - [ ] Servicio `openmetadata-viewer` (puerto `8585:8585`) con API `/api/v1/lineage` y visualizador.
-  - [ ] Servicio `api` (FastAPI en `8000:8000`).
-  - [ ] Servicio `web` (React JS en `3000:3000`).
-- [ ] Crear `docker-compose.openmetadata.yml` (stack empresarial OpenSearch + Java Server opcional).
-- [ ] Crear `db/init/01_schemas_and_roles.sql`:
-  - [ ] Schemas: `raw`, `staging`, `curated`, `audit`.
-  - [ ] Roles: `sismo_ingest`, `sismo_transform`, `sismo_app_readonly` (mínimo privilegio).
-- [ ] Crear `db/init/02_tables_and_indexes.sql`:
-  - [ ] `curated.gold_earthquakes` con índices B-Tree en `event_time_utc`, `magnitude`, `place`.
-  - [ ] `curated.gold_hourly_kpis` y `curated.gold_anomalies`.
-  - [ ] `curated.gold_ai_reports` y `audit.quality_metrics`.
-  - [ ] `audit.batch_reconciliation` (fidelidad 20/20) y `audit.ai_executions`.
-  - [ ] `audit.users` y `audit.pipeline_alerts`.
-- [ ] Crear `db/init/03_seed_users.sql` con usuarios `admin` y `viewer` hasheados con bcrypt.
+- [x] Crear plantilla de entorno segura [`.env.example`](file:///home/Coder/Documentos/DanielE/PRUEBA_DESEMPENIO_OCTUBRE/.env.example) con Fernet Key, secrets JWT y configuración sin secretos quemados.
+- [x] Crear [`docker-compose.yml`](file:///home/Coder/Documentos/DanielE/PRUEBA_DESEMPENIO_OCTUBRE/docker-compose.yml) unificado con límites de memoria (`mem_limit`):
+  - [x] Servicio `postgres:16-alpine` (puerto `5435:5432`) con persistencia.
+  - [x] Servicio `minio` (puertos `9000:9000` y `9001:9001`) para Lakehouse.
+  - [x] Servicio `minio-init` para crear bucket `sismowatch-lake`.
+  - [x] Servicios Airflow (`airflow-init`, `airflow-webserver` `:8080`, `airflow-scheduler`).
+  - [x] Servicio `openmetadata-viewer` (puerto `8585:8585`) con API `/api/v1/lineage` y visualizador.
+  - [x] Servicio `api` (FastAPI en `8000:8000`).
+  - [x] Servicio `web` (React JS en `3000:3000`).
+- [x] Crear `docker-compose.openmetadata.yml` (stack empresarial OpenSearch + Java Server opcional).
+- [x] Crear `db/init/01_schemas_and_roles.sql`:
+  - [x] Schemas: `raw`, `staging`, `curated`, `audit`.
+  - [x] Roles: `sismo_ingest`, `sismo_transform`, `sismo_app_readonly` (mínimo privilegio).
+- [x] Crear `db/init/02_tables_and_indexes.sql`:
+  - [x] `curated.gold_earthquakes` con índices B-Tree en `event_time_utc`, `magnitude`, `place`.
+  - [x] `curated.gold_hourly_kpis` y `curated.gold_anomalies`.
+  - [x] `curated.gold_ai_reports` y `audit.quality_metrics`.
+  - [x] `audit.batch_reconciliation` (fidelidad 20/20) y `audit.ai_executions`.
+  - [x] `audit.users` y `audit.pipeline_alerts`.
+- [x] Crear `db/init/03_seed_users.sql` con usuarios `admin` y `viewer` hasheados con bcrypt.
 
 ---
 
