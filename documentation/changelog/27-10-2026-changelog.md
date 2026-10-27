@@ -6,6 +6,8 @@
 - [Martes]-[27/10/2026]-[06:50] : Creación y formalización de ADRs en docs/ADRs/, data_lineage.md, architecture.md y business_logic.md.
 - [Martes]-[27/10/2026]-[06:53] : Definición de reglas de cero mocks y orquestación pura en rules.md, y auditoría forense completa del PDF del enunciado.
 - [Martes]-[27/10/2026]-[06:55] : Formalización de arquitectura de autenticación JWT y control de acceso por roles (RBAC) en ADR 0006.
+- [Martes]-[27/10/2026]-[07:00] : Creación de docs/requirements_compliance.md documentando los 7 requerimientos críticos del PDF y plan de acción de auditoría.
+
 
 
 
