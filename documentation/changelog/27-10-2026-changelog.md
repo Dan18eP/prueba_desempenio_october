@@ -21,6 +21,7 @@
 - [Martes]-[27/10/2026]-[07:54] : Culminación de Fase 4 (Motor Dual Text-to-SQL, protocolo de gráficos declarativos para Chart.js, Circuit Breaker y tech-doc-f4.md).
 - [Martes]-[27/10/2026]-[08:05] : Culminación de Fase 5 (FastAPI routers con JWT RBAC, Server-Sent Events, frontend React.js con Vite, Chart.js, Leaflet, vistas de Centro de Control, Linaje, Agente IA y Gobernanza, y tech-doc-f5.md).
 - [Martes]-[27/10/2026]-[08:16] : Culminación de Fase 6 (Suite de 22 pruebas automatizadas con pytest al 100% passed, escaneo estático Bandit con 0 vulnerabilidades altas, pip-audit, README.md maestro y tech-doc-f6.md).
+- [Martes]-[27/10/2026]-[09:00] : Formalización de ADR 0010 (Selección del motor de procesamiento Medallón con Python Nativo y Pandera tras benchmarking empírico), y renombrado canónico de DAG a dag_medallion_processing.py.
 
 
 

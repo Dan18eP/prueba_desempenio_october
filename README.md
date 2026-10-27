@@ -17,19 +17,19 @@ flowchart TD
     subgraph LAKEHOUSE["2. Lakehouse Medallion (MinIO S3)"]
         BRONZE["MinIO Bronze Layer\n(s3://sismowatch-lake/bronze/)\nPayloads JSON Inmutables"]
         AF_INGEST -->|Direct S3 Ingest (Sin Landing Intermedio)| BRONZE
-        SPARK["PySpark Medallion Engine\n(dag_pyspark_medallion)"]
-        BRONZE -->|Lectura Cruda| SPARK
+        MEDALLION["Medallion Processing Engine\n(dag_medallion_processing)"]
+        BRONZE -->|Lectura Cruda| MEDALLION
         SILVER["MinIO Silver Layer\n(s3://sismowatch-lake/silver/)\nParquet Snappy Deduplicado"]
-        SPARK -->|Deduplicación & Pandera Q7| SILVER
+        MEDALLION -->|Deduplicación & Pandera Q7| SILVER
     end
 
     subgraph SERVICING["3. Capa Servicing Curated (PostgreSQL)"]
         GOLD_PG[("PostgreSQL Curated Gold\n(curated.gold_earthquakes)\nInvariante: '20 in -> 20 out'")]
-        SPARK -->|Idempotent Upsert ON CONFLICT| GOLD_PG
+        MEDALLION -->|Idempotent Upsert ON CONFLICT| GOLD_PG
         QUARANTINE[("Vista de Cuarentena No Destructiva\n(curated.quality_quarantine)\nSolo Admins - RBAC 403")]
-        SPARK -.->|Flagging sin pérdida| QUARANTINE
+        MEDALLION -.->|Flagging sin pérdida| QUARANTINE
         KPIS[("KPIs Horarios & Anomalías Z-Score\n(curated.gold_hourly_kpis)")]
-        SPARK -->|Agregaciones| KPIS
+        MEDALLION -->|Agregaciones| KPIS
     end
 
     subgraph INTELLIGENCE["4. Capa de Inteligencia & Agente Dual"]
@@ -148,7 +148,7 @@ tests/test_api_endpoints.py::test_owasp_llm01_prompt_injection_sanitization PASS
 tests/test_api_endpoints.py::test_owasp_llm06_sql_validation_blocks_mutations PASSED [ 36%]
 tests/test_api_endpoints.py::test_declarative_chart_protocol PASSED      [ 40%]
 tests/test_dag_integrity.py::test_dag_files_exist PASSED                 [ 45%]
-tests/test_dag_integrity.py::test_dag_ast_syntax[dag_pyspark_medallion.py] PASSED [ 50%]
+tests/test_dag_integrity.py::test_dag_ast_syntax[dag_medallion_processing.py] PASSED [ 50%]
 tests/test_dag_integrity.py::test_dag_ast_syntax[dag_historical_backfill.py] PASSED [ 54%]
 tests/test_dag_integrity.py::test_dag_ast_syntax[dag_daily_ai_report.py] PASSED [ 59%]
 tests/test_dag_integrity.py::test_dag_ast_syntax[dag_usgs_ingest.py] PASSED [ 63%]

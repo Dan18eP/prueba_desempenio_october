@@ -144,7 +144,7 @@ def get_pipeline_status(db: Session = Depends(get_readonly_db)):
         "pipeline_health": "OPTIMAL",
         "active_dags": [
             {"dag_id": "dag_usgs_ingest", "schedule": "*/5 * * * *", "state": "ACTIVE"},
-            {"dag_id": "dag_pyspark_medallion", "schedule": "Dataset Triggered", "state": "ACTIVE"},
+            {"dag_id": "dag_medallion_processing", "schedule": "Dataset Triggered", "state": "ACTIVE"},
             {"dag_id": "dag_daily_ai_report", "schedule": "0 6 * * *", "state": "ACTIVE"},
             {"dag_id": "dag_historical_backfill", "schedule": "Manual Trigger", "state": "READY"}
         ],

@@ -50,7 +50,7 @@ Este documento sirve como el tablero de control de avance técnico para garantiz
   - [x] Try-catch en cada tarea, reintentos exponenciales y timeout.
   - [x] Ingesta a MinIO Bronze (`s3://sismowatch-lake/bronze/`).
   - [x] Disparo automático de transformación vía `TriggerDagRunOperator`.
-- [x] Crear `airflow/dags/dag_pyspark_medallion.py`:
+- [x] Crear `airflow/dags/dag_medallion_processing.py` (ADR 0010):
   - [x] PySpark local (`local[*]`), sin clúster ocioso.
   - [x] Bronze JSON $\to$ Silver Parquet Snappy (`s3://sismowatch-lake/silver/earthquakes/`).
   - [x] Deduplicación por ventana temporal de última revisión (`updated DESC`).

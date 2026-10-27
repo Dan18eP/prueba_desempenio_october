@@ -14,7 +14,7 @@ En esta fase final se implementó la suite completa de pruebas automatizadas con
   - Matriz de riesgo de tsunami ($M \ge 6.8 \land \text{prof} \le 100\text{ km}$).
   - Verificación matemática de la invariante: 20 features de entrada producen exactamente 20 registros procesados en Silver (100% fidelidad, 0 pérdidas).
 - `tests/test_dag_integrity.py`:
-  - Existencia y análisis sintáctico por AST de los 4 DAGs de Airflow (`dag_usgs_ingest`, `dag_pyspark_medallion`, `dag_daily_ai_report`, `dag_historical_backfill`).
+  - Existencia y análisis sintáctico por AST de los 4 DAGs de Airflow (`dag_usgs_ingest`, `dag_medallion_processing`, `dag_daily_ai_report`, `dag_historical_backfill`).
   - Validación de periodicidades y nombres canónicos de tareas.
 - `tests/test_quality_rules.py`:
   - Evaluación de las 7 reglas de calidad de datos Pandera (rango de magnitud, profundidad, coordenadas geográficas, frescura máxima de 120 min, etc.).

@@ -47,7 +47,7 @@ earthquakes/ & kpis/"]
     end
 
     SRC -->|Airflow: dag_usgs_ingest| BRONZE
-    BRONZE -->|PySpark: dag_pyspark_medallion| SILVER
+    BRONZE -->|Airflow: dag_medallion_processing| SILVER
     SILVER -->|PySpark: Transform & Deduplicate| GOLD_MINIO
     GOLD_MINIO -->|Idempotent Upsert| GOLD_PG
     SILVER -->|Calculo de Agregados| KPIS_PG
@@ -127,7 +127,7 @@ Para interoperabilidad con OpenMetadata sin sobrecargar la memoria de la máquin
   - Tarea 1: `dag_usgs_ingest.fetch_and_store_bronze`
     - *Entrada:* `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson`
     - *Salida:* `minio_sismowatch_lake.bronze.usgs_feed`
-  - Tarea 2: `dag_pyspark_medallion.transform_silver_gold`
+  - Tarea 2: `dag_medallion_processing.transform_silver_gold`
     - *Entrada:* `minio_sismowatch_lake.bronze.usgs_feed`
     - *Salida:* `minio_sismowatch_lake.silver.earthquakes`, `postgres_sismowatch.curated.gold_earthquakes`
   - Tarea 3: `dag_daily_ai_report.generate_executive_summary`

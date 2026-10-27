@@ -13,7 +13,7 @@ def test_dag_files_exist():
     """Verifies that all 4 required DAGs exist in airflow/dags/."""
     expected_dags = [
         "dag_usgs_ingest.py",
-        "dag_pyspark_medallion.py",
+        "dag_medallion_processing.py",
         "dag_daily_ai_report.py",
         "dag_historical_backfill.py"
     ]
@@ -43,10 +43,10 @@ def test_dag_schedule_and_definitions():
     assert "fetch_and_store_bronze" in content
     assert "*/5 * * * *" in content
 
-    medallion_path = os.path.join(DAG_FOLDER, "dag_pyspark_medallion.py")
+    medallion_path = os.path.join(DAG_FOLDER, "dag_medallion_processing.py")
     with open(medallion_path, "r", encoding="utf-8") as f:
         content = f.read()
-    assert "dag_pyspark_medallion" in content
+    assert "dag_medallion_processing" in content
     assert "transform_bronze_to_silver" in content
     assert "transform_silver_to_gold" in content
 

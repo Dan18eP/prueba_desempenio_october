@@ -24,7 +24,7 @@ flowchart TD
     subgraph S2 ["2. Orquestación (Apache Airflow 2.10+)"]
         DAG_ING["dag_usgs_ingest (Cada 5 min)"]
         DAG_BACK["dag_historical_backfill (Parametrizado)"]
-        DAG_SPARK["dag_pyspark_medallion (Trigger / Asset)"]
+        DAG_MED["dag_medallion_processing (Trigger / Asset)"]
         DAG_AI["dag_daily_ai_report (Diario medianoche)"]
     end
 

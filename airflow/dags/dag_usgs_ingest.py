@@ -24,7 +24,7 @@ DOC_MD = """
 - **Periodicidad:** Cada 5 minutos (`*/5 * * * *`).
 - **Sin capa landing intermedia:** El payload GeoJSON entra directamente a MinIO Bronze en formato inmutable append-only.
 - **Resiliencia:** Reintentos exponenciales automáticos, timeout de 15s en llamadas HTTP y `on_failure_callback` centralizado.
-- **Gatillado Reactivo:** Al culminar exitosamente, dispara automáticamente `dag_pyspark_medallion`.
+- **Gatillado Reactivo:** Al culminar exitosamente, dispara automáticamente `dag_medallion_processing`.
 """
 
 default_args = {
@@ -127,8 +127,8 @@ with DAG(
     )
 
     trigger_transform_task = TriggerDagRunOperator(
-        task_id="trigger_pyspark_medallion",
-        trigger_dag_id="dag_pyspark_medallion",
+        task_id="trigger_medallion_processing",
+        trigger_dag_id="dag_medallion_processing",
         wait_for_completion=False,
         conf={"batch_id": "{{ ti.xcom_pull(task_ids='fetch_and_store_bronze', key='batch_id') }}"}
     )

@@ -19,8 +19,8 @@ En esta fase se implementó la orquestación completa de los flujos de datos en 
    - Periodicidad cada 5 min (`*/5 * * * *`).
    - Ingesta directa a MinIO Bronze (`s3://sismowatch-lake/bronze/`) sin capa landing intermedia.
    - Registro de lote en `raw.earthquakes_raw_batches`.
-   - Disparo reactivo mediante `TriggerDagRunOperator` hacia `dag_pyspark_medallion`.
-2. **`dag_pyspark_medallion`:**
+   - Disparo reactivo mediante `TriggerDagRunOperator` hacia `dag_medallion_processing`.
+2. **`dag_medallion_processing` (ADR 0010):**
    - Transformación de Bronze a Silver Parquet Snappy.
    - Deduplicación por ventana temporal `updated DESC`.
    - Detección de anomalías y KPIs horarios en `curated.gold_hourly_kpis`.

@@ -13,10 +13,10 @@ from airflow.include.quality import evaluate_data_quality, persist_quality_metri
 from airflow.include.anomaly_detection import detect_seismic_anomalies
 from airflow.include.openmetadata_lineage import emit_openlineage_event
 
-logger = logging.getLogger("airflow.dag.pyspark_medallion")
+logger = logging.getLogger("airflow.dag.medallion_processing")
 
 DOC_MD = """
-### DAG: dag_pyspark_medallion
+### DAG: dag_medallion_processing
 **Propósito:** Pipeline Medallón completo que refina los datos desde MinIO Bronze (JSON crudo), ejecuta limpieza y tipado en Silver (Parquet Snappy), calcula clasificaciones de severidad y anomalías estadísticas (Z-Score), y sincroniza de forma idempotente a Gold (MinIO Parquet + PostgreSQL Curated).
 
 #### Principios Clave:
@@ -282,7 +282,7 @@ def transform_silver_to_gold(**context):
 
         # 6. Emit OpenLineage Event
         emit_openlineage_event(
-            job_name="dag_pyspark_medallion",
+            job_name="dag_medallion_processing",
             inputs=["minio_sismowatch_lake.silver.earthquakes"],
             outputs=["postgres_sismowatch.curated.gold_earthquakes", "postgres_sismowatch.curated.gold_hourly_kpis"],
             row_count=len(gold_records)
@@ -296,14 +296,14 @@ def transform_silver_to_gold(**context):
         conn.close()
 
 with DAG(
-    dag_id="dag_pyspark_medallion",
+    dag_id="dag_medallion_processing",
     default_args=default_args,
     description="Procesamiento Medallón: Limpieza Silver y sincronización a Gold Curated",
     schedule_interval=None, # Disparado reactivamente por dag_usgs_ingest
     start_date=datetime(2026, 10, 1),
     catchup=False,
     max_active_runs=1,
-    tags=["transformacion", "spark", "medallion", "calidad"],
+    tags=["transformacion", "medallion", "calidad", "lakehouse"],
     doc_md=DOC_MD
 ) as dag:
 
