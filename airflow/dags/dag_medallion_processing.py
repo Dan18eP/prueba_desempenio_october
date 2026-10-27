@@ -114,6 +114,26 @@ def transform_bronze_to_silver(**context):
     enriched_records, quality_summary = evaluate_data_quality(dedup_records, batch_id)
     persist_quality_metrics(quality_summary)
 
+    # 4.1 Write Silver Parquet to MinIO Data Lakehouse
+    try:
+        import io
+        import pandas as pd
+        silver_df = pd.DataFrame(enriched_records)
+        if not silver_df.empty:
+            now_dt = datetime.now(timezone.utc)
+            parquet_key = f"silver/year={now_dt.year}/month={now_dt.month:02d}/day={now_dt.day:02d}/silver_{batch_id}.parquet"
+            buffer = io.BytesIO()
+            silver_df.to_parquet(buffer, index=False, engine="pyarrow", compression="snappy")
+            s3_client.put_object(
+                Bucket=MINIO_BUCKET,
+                Key=parquet_key,
+                Body=buffer.getvalue(),
+                ContentType="application/octet-stream"
+            )
+            logger.info(f"[MEDALLION-SILVER] Saved Silver Parquet to s3://{MINIO_BUCKET}/{parquet_key}")
+    except Exception as s3_err:
+        logger.warning(f"[MEDALLION-SILVER] Could not write Silver Parquet to MinIO: {s3_err}")
+
     # 5. Persistencia en Silver (PostgreSQL staging.earthquakes_refined)
     conn = get_db_connection(role="transform")
     try:

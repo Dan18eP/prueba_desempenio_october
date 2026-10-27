@@ -171,7 +171,7 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
             status="FALLBACK",
             db=db
         )
-        return execute_fallback_intent(clean_prompt, db)
+        return execute_fallback_intent(clean_prompt, db, latency_ms=latency_ms)
 
 def record_ai_execution(task_name: str, prompt_version: str, model_name: str, prompt_tokens: int, completion_tokens: int, latency_ms: int, status: str, db: Session):
     """Logs LLM interaction metrics into audit.ai_executions (PDF Pág. 5)."""

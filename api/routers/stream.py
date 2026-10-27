@@ -1,6 +1,7 @@
 import asyncio
 import json
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Optional
 from fastapi import APIRouter, Request, Query, Depends
 from fastapi.responses import StreamingResponse
@@ -9,6 +10,13 @@ from sqlalchemy import text
 from api.core.database import SessionLocalReadOnly
 
 router = APIRouter(prefix="/api", tags=["Real-Time SSE Stream"])
+
+def json_serial(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 async def event_generator(request: Request):
     """
@@ -36,16 +44,10 @@ async def event_generator(request: Request):
                 LIMIT 10
             """)
             initial_rows = db.execute(query).mappings().fetchall()
-            events = [
-                {
-                    **dict(r),
-                    "event_time_utc": r["event_time_utc"].isoformat() if r["event_time_utc"] else None
-                }
-                for r in initial_rows
-            ]
+            events = [dict(r) for r in initial_rows]
             if events:
                 last_seen_id = events[0]["id"]
-            yield f"event: initial_batch\ndata: {json.dumps(events)}\n\n"
+            yield f"event: initial_batch\ndata: {json.dumps(events, default=json_serial)}\n\n"
     except Exception as e:
         yield f": error fetching initial batch: {str(e)}\n\n"
 
@@ -75,12 +77,9 @@ async def event_generator(request: Request):
 
                 if new_rows:
                     for r in new_rows:
-                        payload = {
-                            **dict(r),
-                            "event_time_utc": r["event_time_utc"].isoformat() if r["event_time_utc"] else None
-                        }
+                        payload = dict(r)
                         last_seen_id = r["id"]
-                        yield f"event: earthquake_update\ndata: {json.dumps(payload)}\n\n"
+                        yield f"event: earthquake_update\ndata: {json.dumps(payload, default=json_serial)}\n\n"
                 else:
                     # Keep-alive heartbeat
                     yield f": keepalive {datetime.now(timezone.utc).isoformat()}\n\n"

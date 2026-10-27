@@ -5,7 +5,7 @@ import logging
 
 logger = logging.getLogger("api.services.circuit_breaker")
 
-def execute_fallback_intent(prompt: str, db: Session) -> dict:
+def execute_fallback_intent(prompt: str, db: Session, latency_ms: int = 15) -> dict:
     """
     Deterministic Analytical Fallback Engine.
     Executes in < 15ms when LLM times out or is offline, guaranteeing 100% platform availability.
@@ -40,6 +40,7 @@ def execute_fallback_intent(prompt: str, db: Session) -> dict:
             "sql_executed": sql.strip(),
             "suggested_questions": ["¿Hay sismos con alerta de tsunami?", "Ver los sismos más fuertes de hoy"],
             "model_used": "Deterministic-Fallback-Engine (Zero-Crash)",
+            "latency_ms": latency_ms,
             "fallback_active": True
         }
 
@@ -69,6 +70,7 @@ def execute_fallback_intent(prompt: str, db: Session) -> dict:
             "sql_executed": sql.strip(),
             "suggested_questions": ["¿Cuáles fueron las magnitudes máximas?", "Distribución por severidad"],
             "model_used": "Deterministic-Fallback-Engine (Zero-Crash)",
+            "latency_ms": latency_ms,
             "fallback_active": True
         }
 
@@ -99,6 +101,7 @@ def execute_fallback_intent(prompt: str, db: Session) -> dict:
             "sql_executed": sql.strip(),
             "suggested_questions": ["Ver sismos mayores a 5.0", "Regiones más activas"],
             "model_used": "Deterministic-Fallback-Engine (Zero-Crash)",
+            "latency_ms": latency_ms,
             "fallback_active": True
         }
 
@@ -128,6 +131,7 @@ def execute_fallback_intent(prompt: str, db: Session) -> dict:
             "sql_executed": sql.strip(),
             "suggested_questions": ["¿Hay sismos con alerta de tsunami?", "Ver serie temporal"],
             "model_used": "Deterministic-Fallback-Engine (Zero-Crash)",
+            "latency_ms": latency_ms,
             "fallback_active": True
         }
 
@@ -147,5 +151,6 @@ def execute_fallback_intent(prompt: str, db: Session) -> dict:
         "sql_executed": sql.strip(),
         "suggested_questions": ["Grafica los sismos por severidad", "Evolución por hora", "Alertas de tsunami"],
         "model_used": "Deterministic-Fallback-Engine (Zero-Crash)",
+        "latency_ms": latency_ms,
         "fallback_active": True
     }

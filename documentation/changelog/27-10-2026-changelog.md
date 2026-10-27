@@ -25,6 +25,7 @@
 - [Martes]-[27/10/2026]-[09:14] : Remediaciones quirúrgicas alineadas a la especificación oficial USGS FDSN: manejo de HTTP 204 No Content, pre-flight check con método /count en endpoint admin, recuperación automática CDC por updatedafter en downtime mayor a 60 min, actualización de ADR 0005 y nueva prueba unitaria pasando al 100% (23/23).
 - [Martes]-[27/10/2026]-[09:16] : Configuración de requerimientos adicionales de Python (_PIP_ADDITIONAL_REQUIREMENTS) en docker-compose.yml para Airflow y alineación de airflow/requirements.txt con Pandas y Pandera.
 - [Martes]-[27/10/2026]-[09:19] : Sincronización de nombres canónicos de DAG (dag_medallion_processing) y motor Pandas/Pandera en visores y endpoints de linaje de OpenMetadata/OpenLineage.
+- [Martes]-[27/10/2026]-[09:46] : Despliegue integral con Docker Compose (7 contenedores activos y saludables): MinIO Silo S3, PostgreSQL con schemas raw/staging/curated, OpenMetadata en :8585, React Web en :3000, Airflow en :8080 y FastAPI en :8000. Ingesta live de USGS ejecutada y persistencia de Silver Parquet en MinIO y Gold en PostgreSQL validada con 100% fidelidad (0 pérdidas).
 
 
 

@@ -27,16 +27,22 @@ async def lifespan(app: FastAPI):
     # Ensure seed users exist in database on startup
     try:
         with engine_admin.connect() as conn:
-            admin_hash = get_password_hash("AdminSismo2026!")
-            viewer_hash = get_password_hash("ViewerSismo2026!")
+            admin_hash = get_password_hash(settings.ADMIN_PASSWORD)
+            viewer_hash = get_password_hash(settings.VIEWER_PASSWORD)
             
             conn.execute(text("""
                 INSERT INTO audit.users (username, email, hashed_password, role)
                 VALUES 
-                    ('admin', 'admin@sismowatch.gov.co', :a_hash, 'admin'),
-                    ('viewer', 'viewer@sismowatch.gov.co', :v_hash, 'viewer')
-                ON CONFLICT (username) DO NOTHING;
-            """), {"a_hash": admin_hash, "v_hash": viewer_hash})
+                    ('admin', :admin_email, :a_hash, 'admin'),
+                    ('viewer', :viewer_email, :v_hash, 'viewer')
+                ON CONFLICT (username) DO UPDATE SET
+                    hashed_password = EXCLUDED.hashed_password;
+            """), {
+                "a_hash": admin_hash,
+                "v_hash": viewer_hash,
+                "admin_email": "admin@sismowatch.internal",
+                "viewer_email": "viewer@sismowatch.internal"
+            })
             conn.commit()
             logger.info("Default seed users verified in audit.users table.")
     except Exception as e:
