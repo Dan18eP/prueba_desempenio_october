@@ -26,17 +26,28 @@ import {
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import { api } from '../api';
 
+const DEFAULT_WELCOME_MESSAGE = {
+  role: 'assistant',
+  text: '¡Hola! Soy SismoWatch AI, tu analista sismológico basado en Qwen 2.5 y motor Dual. Puedo consultar el catálogo de sismos mediante Text-to-SQL y generar gráficos declarativos en tiempo real. ¿En qué puedo asistirte?',
+  chart: null,
+  sql: null,
+  model: 'qwen2.5-coder:3b',
+  latency: 12
+};
+
 export default function AiAgentView({ currentUser }) {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      text: '¡Hola! Soy SismoWatch AI, tu analista sismológico basado en Qwen 2.5 y motor Dual. Puedo consultar el catálogo de sismos mediante Text-to-SQL y generar gráficos declarativos en tiempo real. ¿En qué puedo asistirte?',
-      chart: null,
-      sql: null,
-      model: 'qwen2.5-coder:3b',
-      latency: 12
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sismowatch_chat_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      // Fallback
     }
-  ]);
+    return [DEFAULT_WELCOME_MESSAGE];
+  });
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
@@ -44,6 +55,19 @@ export default function AiAgentView({ currentUser }) {
   const [reportLoading, setReportLoading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [actionMessage, setActionMessage] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sismowatch_chat_history', JSON.stringify(messages));
+    } catch (e) {
+      // Storage error
+    }
+  }, [messages]);
+
+  const handleClearHistory = () => {
+    setMessages([DEFAULT_WELCOME_MESSAGE]);
+    localStorage.removeItem('sismowatch_chat_history');
+  };
 
   const loadReport = async (window) => {
     setReportLoading(true);
@@ -174,6 +198,14 @@ export default function AiAgentView({ currentUser }) {
               </div>
             </div>
           </div>
+          <button
+            onClick={handleClearHistory}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#181c24] hover:bg-[#202531] border border-[#262a33] text-[11px] font-mono text-gray-400 hover:text-white transition-all"
+            title="Reiniciar historial de la conversación"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>Limpiar Sesión</span>
+          </button>
         </div>
 
         {/* Suggested Quick Questions */}

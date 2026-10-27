@@ -1,6 +1,7 @@
 # SismoWatch - Plataforma de Inteligencia Sísmica Operacional
 > **SuperApp Enterprise Data Engineering & AI Platform**  
-> *Monitoreo en tiempo real del catálogo sísmico global de USGS, arquitectura Lakehouse Medallion con Apache Spark, MinIO, PostgreSQL, orquestación resiliente en Apache Airflow, trazabilidad OpenMetadata, Serving Layer en FastAPI con Server-Sent Events (SSE) y Agente Conversacional Text-to-SQL con Motor Dual (Qwen 2.5 local / Gemini) y protocolo de gráficos declarativos.*
+> *Monitoreo en tiempo real del catálogo sísmico global de USGS, arquitectura Lakehouse Medallion con MinIO, PostgreSQL, orquestación resiliente en Apache Airflow, trazabilidad OpenMetadata, Serving Layer en FastAPI con Server-Sent Events (SSE) y Agente Conversacional Text-to-SQL con Motor Dual (Qwen 2.5 local / Gemini) y protocolo de gráficos declarativos.*  
+> **Repositorio Oficial GitHub:** [https://github.com/Dan18eP/prueba_desempenio_october](https://github.com/Dan18eP/prueba_desempenio_october)
 
 ---
 
@@ -16,7 +17,7 @@ flowchart TD
 
     subgraph LAKEHOUSE["2. Lakehouse Medallion (MinIO S3)"]
         BRONZE["MinIO Bronze Layer\n(s3://sismowatch-lake/bronze/)\nPayloads JSON Inmutables"]
-        AF_INGEST -->|Direct S3 Ingest (Sin Landing Intermedio)| BRONZE
+        AF_INGEST -->|"Direct S3 Ingest (Sin Landing Intermedio)"| BRONZE
         MEDALLION["Medallion Processing Engine\n(dag_medallion_processing)"]
         BRONZE -->|Lectura Cruda| MEDALLION
         SILVER["MinIO Silver Layer\n(s3://sismowatch-lake/silver/)\nParquet Snappy Deduplicado"]
@@ -24,10 +25,8 @@ flowchart TD
     end
 
     subgraph SERVICING["3. Capa Servicing Curated (PostgreSQL)"]
-        GOLD_PG[("PostgreSQL Curated Gold\n(curated.gold_earthquakes)\nInvariante: '20 in -> 20 out'")]
+        GOLD_PG[("PostgreSQL Curated Gold\n(curated.gold_earthquakes)\nPreservación Total 100%")]
         MEDALLION -->|Idempotent Upsert ON CONFLICT| GOLD_PG
-        QUARANTINE[("Vista de Cuarentena No Destructiva\n(curated.quality_quarantine)\nSolo Admins - RBAC 403")]
-        MEDALLION -.->|Flagging sin pérdida| QUARANTINE
         KPIS[("KPIs Horarios & Anomalías Z-Score\n(curated.gold_hourly_kpis)")]
         MEDALLION -->|Agregaciones| KPIS
     end
@@ -41,7 +40,7 @@ flowchart TD
 
     subgraph SERVING["5. Capa de Servicios & Frontend"]
         FASTAPI["FastAPI Serving Backend (:8000)\n- Real-Time SSE (/api/stream)\n- JWT RBAC (Admin vs Viewer)\n- Chart.js Declarative Protocol"]
-        GOLD_PG -->|Conexión Solo Lectura (sismo_app_readonly)| FASTAPI
+        GOLD_PG -->|"Conexión Solo Lectura (sismo_app_readonly)"| FASTAPI
         DUAL_AI -->|JSON Declarativo| FASTAPI
         REACT["React.js Tactical Dashboard (:3000)\n- Dark Mode Táctico\n- Leaflet Geospatial Map (Zero Token)\n- Gráficos Chart.js Dinámicos\n- Feed SSE en Vivo"]
         FASTAPI -->|EventSource Stream & REST| REACT
@@ -80,17 +79,17 @@ La plataforma implementa **Control de Acceso Basado en Roles (RBAC)** con tokens
 
 | Rol | Usuario | Contraseña | Permisos y Restricciones |
 | :--- | :--- | :--- | :--- |
-| **Administrador (`admin`)** | `admin` | `AdminSismo2026!` | Acceso total: consulta operativa, consola IA, auditoría de cuarentena (`GET /api/quality/quarantine`), ejecución de backfills históricos y regeneración de reportes ejecutivos. |
-| **Visualizador (`viewer`)** | `viewer` | `ViewerSismo2026!` | Acceso de solo lectura: Centro de Control, mapa, series temporales, consulta del agente IA. **Acceso estrictamente denegado con HTTP 403 Forbidden** a cuarentena y backfill (Requerimiento PDF Pág. 3 y 7). |
+| **Administrador (`admin`)** | `admin` | `SismoAdmin2026!Secret` | Acceso total: consulta operativa, consola IA, auditoría de calidad (`GET /api/quality/audit-flags`), ejecución de backfills históricos y regeneración de reportes ejecutivos. |
+| **Visualizador (`viewer`)** | `viewer` | `SismoViewer2026!` | Acceso de solo lectura: Centro de Control, mapa, series temporales, consulta del agente IA. **Acceso estrictamente denegado con HTTP 403 Forbidden** a backfill y regeneración administrativa (Requerimiento PDF Pág. 3 y 7). |
 
 > En el frontend táctico (`http://localhost:3000`), el botón **Ingresar** incluye botones de **1-Click** para alternar inmediatamente entre `admin` y `viewer` para facilitar la evaluación de la mesa evaluadora.
 
 ---
 
-## 4. Invariante Crítica: "Me llegaron 20, mostré 20" (Cero Pérdida)
+## 4. Invariante Crítica: Preservación Total y Linaje Puro (Cero Pérdida)
 
-- **Linaje Puro:** La ingesta de la API de USGS (`/summary/all_hour.geojson`) se escribe directamente al Lakehouse Bronze de MinIO (`s3://sismowatch-lake/bronze/earthquakes/`) sin carpetas landing intermedias ni buffers temporales que puedan causar pérdida de registros.
-- **Cuarentena No Destructiva:** Cualquier registro que presente advertencias de calidad de datos (ej. magnitud anómala, desfase temporal o coordenadas atípicas) **JAMÁS se descarta**. Se preserva en el flujo con el tag `quality_status = 'FLAGGED'` y queda registrado en la vista de auditoría `curated.quality_quarantine` para inspección forense por parte del Administrador.
+- **Linaje Puro:** La ingesta de la API de USGS se escribe directamente al Lakehouse Bronze de MinIO (`s3://sismowatch-lake/bronze/earthquakes/`) sin carpetas landing intermedias ni buffers temporales que puedan causar pérdida de registros.
+- **Calidad No Destructiva (ADR 0011):** Cualquier registro que presente advertencias de calidad de datos (ej. magnitud anómala, desfase temporal o coordenadas atípicas) **JAMÁS se descarta**. Se preserva en el flujo con el tag `quality_status = 'FLAGGED'` y queda registrado en la vista de auditoría `audit.pipeline_alerts` para inspección forense por parte del Administrador.
 - **Conciliación Matemática:** La tabla `audit.batch_reconciliation` calcula de forma generada y persistente:
   $$\text{Fidelity Rate} = \frac{\text{gold\_count}}{\text{raw\_count}} \times 100 = 100.00\% \quad (\text{loss\_count} = 0)$$
 

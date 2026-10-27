@@ -205,8 +205,8 @@ export default function App() {
         {/* 5 Operational Telemetry KPI Cards */}
         <KpiBar telemetry={kpis?.telemetry_24h} governance={kpis?.governance_and_fidelity} />
 
-        {/* Dynamic Views */}
-        {activeTab === 'control' && (
+        {/* Dynamic Views with State & Session Preservation */}
+        <div className={activeTab === 'control' ? 'block' : 'hidden'}>
           <ControlCenterView
             events={events}
             timeseries={timeseries}
@@ -219,15 +219,19 @@ export default function App() {
             onTimeWindowChange={handleTimeWindowChange}
             eventsLoading={eventsLoading}
           />
-        )}
+        </div>
 
-        {activeTab === 'lineage' && <LineageView />}
+        <div className={activeTab === 'lineage' ? 'block' : 'hidden'}>
+          <LineageView />
+        </div>
 
-        {activeTab === 'agent' && <AiAgentView currentUser={currentUser} />}
+        <div className={activeTab === 'agent' ? 'block' : 'hidden'}>
+          <AiAgentView currentUser={currentUser} />
+        </div>
 
-        {activeTab === 'governance' && (
+        <div className={activeTab === 'governance' ? 'block' : 'hidden'}>
           <GovernanceView currentUser={currentUser} />
-        )}
+        </div>
       </main>
 
       {/* Ground Truth Invariant Footer */}

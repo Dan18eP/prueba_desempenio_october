@@ -3,8 +3,8 @@ import { Shield, User, Lock, Activity, Check, AlertCircle, ArrowRight } from 'lu
 import { api } from '../api';
 
 export default function LoginView({ onLoginSuccess }) {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('SismoAdmin2026!Secret');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 

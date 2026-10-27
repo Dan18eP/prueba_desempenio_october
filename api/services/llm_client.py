@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from api.core.config import settings
 from api.core.database import engine_admin
-from api.services.security_guard import sanitize_text_for_llm, validate_sql_query
+from api.services.security_guard import sanitize_text_for_llm, validate_sql_query, classify_and_intercept_intent
 from api.services.chart_protocol import build_declarative_chart
 from api.services.circuit_breaker import execute_fallback_intent
 
@@ -84,6 +84,11 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
     Executes conversational query using Dual-Engine architecture (Local Ollama / Gemini API)
     with strict security validation, read-only SQL execution, and deterministic fallback.
     """
+    # Interceptar determinísticamente saludos, amenazas o mensajes fuera de dominio
+    intercepted = classify_and_intercept_intent(user_prompt)
+    if intercepted:
+        return intercepted
+
     clean_prompt = sanitize_text_for_llm(user_prompt)
     if not clean_prompt:
         return execute_fallback_intent("resumen", db)
@@ -172,10 +177,25 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
             )
 
         raw_expl = str(parsed.get("explanation") or "").strip()
+        # Sanitizar meta-comentarios sobre ausencia de graficos o ecos del prompt
+        meta_chart_phrases = [
+            r"(?i)este\s+gr[aá]fico\s+no\s+est[aá]\s+disponible[^\.\n]*\.?",
+            r"(?i)no\s+se\s+muestra\s+ning[uú]n\s+gr[aá]fico[^\.\n]*\.?",
+            r"(?i)debido\s+a\s+que\s+la\s+pregunta\s+no\s+especifica\s+una\s+solicitud\s+de\s+gr[aá]fico[^\.\n]*\.?",
+            r"(?i)esta\s+consulta\s+no\s+requiere\s+gr[aá]fico[^\.\n]*\.?",
+            r"(?i)no\s+se\s+gener[oó]\s+gr[aá]fico[^\.\n]*\.?",
+            r"(?i)interpretaci[oó]n\s+anal[ií]tica\s+concisa[^\.\n]*\.?",
+            r"(?i)nterpretaci[oó]n\s+anal[ií]tica[^\.\n]*\.?"
+        ]
+        for pat in meta_chart_phrases:
+            raw_expl = re.sub(pat, "", raw_expl).strip()
+
         # Limpiar texto de plantilla repetido o caracteres iniciales truncados
-        if not raw_expl or "nterpretación analítica concisa" in raw_expl.lower() or raw_expl.lower().startswith("interpretación") or raw_expl.lower().startswith("nterpretación"):
+        if not raw_expl or len(raw_expl) < 5 or raw_expl.lower().startswith("interpretación") or raw_expl.lower().startswith("nterpretación"):
             if "tsunami" in clean_prompt.lower():
                 explanation = "Sismos con protocolo de alerta de tsunami activo registrados en la capa Gold:"
+            elif "mayor" in clean_prompt.lower() or "magnitud" in clean_prompt.lower():
+                explanation = "Eventos sísmicos registrados con magnitudes superiores al umbral consultado (capa Gold):"
             elif "anomal" in clean_prompt.lower():
                 explanation = "Eventos sísmicos clasificados como anomalías estadísticas (Z-Score > 2.5 o enjambres):"
             elif "severidad" in clean_prompt.lower():

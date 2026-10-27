@@ -23,7 +23,8 @@ import {
   Layers,
   Activity,
   AlertTriangle,
-  Waves
+  Waves,
+  Calendar
 } from 'lucide-react';
 import { formatBogotaDate, formatBogotaTimeOnly } from '../utils/date';
 
@@ -479,32 +480,40 @@ export default function ControlCenterView({
           </div>
         </div>
 
-        {/* Date Range Custom Filter */}
-        <div className="py-1.5 flex flex-wrap items-center gap-1.5 border-b border-[#262a33] text-[10px] font-mono">
-          <span className="text-gray-400 shrink-0">Rango (max 30d):</span>
-          <input
-            type="date"
-            min="2026-09-27"
-            max="2026-10-27"
-            value={customStartDate}
-            onChange={(e) => setCustomStartDate(e.target.value)}
-            className="px-1.5 py-0.5 rounded bg-[#0a0e16] border border-[#262a33] text-gray-200 text-[10px]"
-          />
-          <span className="text-gray-500">-</span>
-          <input
-            type="date"
-            min="2026-09-27"
-            max="2026-10-27"
-            value={customEndDate}
-            onChange={(e) => setCustomEndDate(e.target.value)}
-            className="px-1.5 py-0.5 rounded bg-[#0a0e16] border border-[#262a33] text-gray-200 text-[10px]"
-          />
+        {/* Date Range Custom Calendar Picker */}
+        <div className="py-2 px-1 flex flex-wrap items-center gap-2 border-b border-[#262a33] text-xs font-mono bg-[#0c1018]/60 rounded-lg">
+          <div className="flex items-center gap-1.5 text-indigo-400 font-bold shrink-0">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Rango Calendario (Max 30d):</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-500">Desde:</span>
+            <input
+              type="date"
+              min="2026-09-27"
+              max="2026-10-27"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="px-2 py-1 rounded bg-[#090c13] border border-[#232b3e] text-gray-200 text-xs focus:outline-none focus:border-indigo-500 font-mono"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-500">Hasta:</span>
+            <input
+              type="date"
+              min="2026-09-27"
+              max="2026-10-27"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="px-2 py-1 rounded bg-[#090c13] border border-[#232b3e] text-gray-200 text-xs focus:outline-none focus:border-indigo-500 font-mono"
+            />
+          </div>
           <button
             onClick={() => onTimeWindowChange && onTimeWindowChange('custom', { startDate: customStartDate, endDate: customEndDate })}
             disabled={!customStartDate || !customEndDate || eventsLoading}
-            className="px-2 py-0.5 rounded bg-[#181c24] hover:bg-indigo-600 text-gray-300 hover:text-white border border-[#262a33] text-[10px] transition-colors disabled:opacity-40"
+            className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-all disabled:opacity-40 shadow-sm"
           >
-            Aplicar
+            Aplicar Rango
           </button>
           {(customStartDate || customEndDate) && (
             <button
@@ -513,7 +522,7 @@ export default function ControlCenterView({
                 setCustomEndDate('');
                 onTimeWindowChange && onTimeWindowChange('24h');
               }}
-              className="px-2 py-0.5 rounded bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 text-[10px] transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-red-950/50 hover:bg-red-900/70 text-red-300 border border-red-500/30 text-xs transition-all"
             >
               Limpiar
             </button>
