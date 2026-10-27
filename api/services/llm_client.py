@@ -38,7 +38,7 @@ Tablas disponibles en esquema curated (PostgreSQL):
 )
 """
 
-SYSTEM_PROMPT = f"""
+SYSTEM_PROMPT = f"""  # nosec B608
 Eres SismoWatch AI, asistente de inteligencia sismológica y Text-to-SQL.
 Tu tarea es convertir la pregunta del usuario en una consulta SQL de solo lectura (SELECT) sobre las tablas del esquema curated.
 

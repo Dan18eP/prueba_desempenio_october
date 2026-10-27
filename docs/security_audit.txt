@@ -1,0 +1,168 @@
+Run started:2026-10-27 13:14:06.926093+00:00
+
+Test results:
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: airflow/include/openmetadata_lineage.py:52:4
+51	        logger.info(f"[OPENMETADATA] Governance catalog verified at {OPENMETADATA_SERVER_URL}")
+52	    except Exception:
+53	        # Governance service notification is non-blocking
+54	        pass
+55	        
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: '$2b$12$0B6a5xZpA9h1E3C7sK9y7.i0UoF8rY2oZ9rV9G5aP1qQ1oE8pZ1eS'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: api/routers/auth.py:32:8
+31	    "admin": {
+32	        "password_hash": "$2b$12$0B6a5xZpA9h1E3C7sK9y7.i0UoF8rY2oZ9rV9G5aP1qQ1oE8pZ1eS", # AdminSismo2026!
+33	        "role": "admin",
+34	        "email": "admin@sismowatch.gov.co"
+35	    },
+36	    "viewer": {
+37	        "password_hash": "$2b$12$6K8m1rL9pQ3vX0aB8sD2..u4XyT7uW3oK5vP2bC4mR9sT0vW1yZ3.", # ViewerSismo2026!
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: '$2b$12$6K8m1rL9pQ3vX0aB8sD2..u4XyT7uW3oK5vP2bC4mR9sT0vW1yZ3.'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: api/routers/auth.py:37:8
+36	    "viewer": {
+37	        "password_hash": "$2b$12$6K8m1rL9pQ3vX0aB8sD2..u4XyT7uW3oK5vP2bC4mR9sT0vW1yZ3.", # ViewerSismo2026!
+38	        "role": "viewer",
+39	        "email": "viewer@sismowatch.gov.co"
+40	    }
+41	}
+42	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html
+   Location: api/routers/auth.py:56:4
+55	            user_row = dict(result)
+56	    except Exception as e:
+57	        # DB may still be bootstrapping, fallback checked below
+58	        pass
+59	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'AdminSismo2026!'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: api/routers/auth.py:74:69
+73	    if not authenticated:
+74	        if login_data.username == "admin" and login_data.password == "AdminSismo2026!":
+75	            authenticated = True
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'ViewerSismo2026!'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: api/routers/auth.py:89:72
+88	                db.rollback()
+89	        elif login_data.username == "viewer" and login_data.password == "ViewerSismo2026!":
+90	            authenticated = True
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'bearer'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: api/routers/auth.py:118:8
+117	        "access_token": access_token,
+118	        "token_type": "bearer",
+119	        "user": {
+120	            "username": login_data.username,
+121	            "role": role,
+122	            "email": email
+123	        }
+124	    }
+125	
+126	@router.get("/me")
+127	def get_me(current_user: TokenData = Depends(get_current_user)):
+
+--------------------------------------------------
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.
+   Severity: Medium   Confidence: Low
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html
+   Location: api/routers/events.py:50:26
+49	
+50	    data_query = text(f"""  # nosec B608
+51	        SELECT 
+52	            id,
+53	            magnitude,
+54	            place,
+55	            event_time_utc,
+56	            updated_time_utc,
+57	            longitude,
+58	            latitude,
+59	            depth_km,
+60	            tsunami_alert,
+61	            significance,
+62	            review_status,
+63	            severity_label,
+64	            is_anomaly,
+65	            anomaly_explanation,
+66	            quality_status
+67	        FROM curated.gold_earthquakes
+68	        WHERE {where_clause}
+69	        ORDER BY event_time_utc DESC
+70	        LIMIT :limit OFFSET :offset
+71	    """)
+72	    rows = db.execute(data_query, params).mappings().fetchall()
+
+--------------------------------------------------
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.
+   Severity: Medium   Confidence: Low
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html
+   Location: api/services/llm_client.py:41:20
+40	
+41	SYSTEM_PROMPT = f"""  # nosec B608
+42	Eres SismoWatch AI, asistente de inteligencia sismológica y Text-to-SQL.
+43	Tu tarea es convertir la pregunta del usuario en una consulta SQL de solo lectura (SELECT) sobre las tablas del esquema curated.
+44	
+45	{GOLD_SCHEMA_CONTEXT}
+46	
+47	REGLAS DE SEGURIDAD ESTRICTAS:
+48	1. Solo genera consultas SELECT. Jamás uses INSERT, UPDATE, DELETE, DROP ni ALTER.
+49	2. Todas las consultas deben ejecutarse contra las tablas curated.gold_earthquakes o curated.gold_hourly_kpis.
+50	3. Responde ÚNICAMENTE con un JSON válido con este formato:
+51	{{
+52	  "sql_query": "SELECT severity_label, COUNT(*) FROM curated.gold_earthquakes GROUP BY severity_label ORDER BY count DESC;",
+53	  "chart_type": "bar", // Opciones: "bar", "line", "doughnut", "none"
+54	  "chart_title": "Distribución por Severidad",
+55	  "explanation": "Breve explicación en español de lo que responderá la consulta."
+56	}}
+57	"""
+58	
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 2725
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 1
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 7
+		Medium: 2
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 2
+		Medium: 5
+		High: 2
+Files skipped (0):

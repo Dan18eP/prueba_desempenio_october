@@ -22,6 +22,8 @@ engine_admin = create_engine(
 
 SessionReadonly = sessionmaker(autocommit=False, autoflush=False, bind=engine_readonly)
 SessionAdmin = sessionmaker(autocommit=False, autoflush=False, bind=engine_admin)
+SessionLocalReadOnly = SessionReadonly
+SessionLocalAdmin = SessionAdmin
 
 Base = declarative_base()
 

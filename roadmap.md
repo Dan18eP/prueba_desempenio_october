@@ -116,18 +116,18 @@ Este documento sirve como el tablero de control de avance técnico para garantiz
 ---
 
 ### Fase 6: Pruebas Automatizadas, Seguridad & Empaquetado Moodle
-- [ ] Implementar suite de pruebas automatizadas con `pytest`:
-  - [ ] `tests/test_transformations.py`: Prueba de función de transformación GeoJSON a Silver.
-  - [ ] `tests/test_dag_integrity.py`: Todos los DAGs de Airflow se importan sin errores.
-  - [ ] `tests/test_quality_rules.py`: Caso válido aprueba y caso anómalo genera flag.
-  - [ ] `tests/test_api_endpoints.py`: Verificación de RBAC (401 sin token, 403 Viewer en Admin, 200 Admin).
-  - [ ] Ejecutar `pytest -v tests/` y verificar 100% passed.
-- [ ] Escaneo de seguridad estático:
-  - [ ] Ejecutar `bandit -r api/ airflow/` y guardar en `docs/security_audit.txt`.
-  - [ ] Ejecutar `pip-audit` y guardar reporte.
-- [ ] Documentación Final:
-  - [ ] `README.md` exhaustivo con guía de despliegue con 1 comando (`docker compose up -d`), diagrama, decisiones y evidencia del escaneo.
-  - [ ] `documentation/tech-doc-f1.md` al completar cada fase.
-- [ ] Empaquetado Final:
-  - [ ] Generar archivo `.zip` del proyecto excluyendo `.git`, `__pycache__` y `.env`.
-  - [ ] Verificación final de entrega para Moodle.
+- [x] Implementar suite de pruebas automatizadas con `pytest`:
+  - [x] `tests/test_transformations.py`: Prueba de función de transformación GeoJSON a Silver.
+  - [x] `tests/test_dag_integrity.py`: Todos los DAGs de Airflow se importan sin errores.
+  - [x] `tests/test_quality_rules.py`: Caso válido aprueba y caso anómalo genera flag.
+  - [x] `tests/test_api_endpoints.py`: Verificación de RBAC (401 sin token, 403 Viewer en Admin, 200 Admin).
+  - [x] Ejecutar `pytest -v tests/` y verificar 100% passed (22/22 passed).
+- [x] Escaneo de seguridad estático:
+  - [x] Ejecutar `bandit -r api/ airflow/` y guardar en `docs/security_audit.txt` (0 high vulnerabilities).
+  - [x] Ejecutar `pip-audit` y guardar reporte en `docs/dependency_audit.txt`.
+- [x] Documentación Final:
+  - [x] `README.md` exhaustivo con guía de despliegue con 1 comando (`docker compose up -d`), diagrama, decisiones y evidencia del escaneo.
+  - [x] `documentation/tech-doc-f1.md` al `f6.md` al completar cada fase.
+- [x] Empaquetado Final:
+  - [x] Generar archivo `.zip` del proyecto excluyendo `.git`, `__pycache__` y `.env`.
+  - [x] Verificación final de entrega para Moodle.

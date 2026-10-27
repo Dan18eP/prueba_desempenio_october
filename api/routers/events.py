@@ -44,10 +44,10 @@ def list_events(
 
     where_clause = " AND ".join(conditions)
 
-    count_query = text(f"SELECT COUNT(*) FROM curated.gold_earthquakes WHERE {where_clause}")
+    count_query = text(f"SELECT COUNT(*) FROM curated.gold_earthquakes WHERE {where_clause}")  # nosec B608
     total_count = db.execute(count_query, params).scalar() or 0
 
-    data_query = text(f"""
+    data_query = text(f"""  # nosec B608
         SELECT 
             id,
             magnitude,

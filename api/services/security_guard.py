@@ -19,8 +19,9 @@ def sanitize_text_for_llm(text: str) -> str:
         return ""
     # 1. Normalize linebreaks and whitespace
     clean = re.sub(r'[\r\n\t]+', ' ', text)
-    # 2. Neutralize escape and delimiter symbols
-    clean = re.sub(r'[`"\'\\<>{}[\]]', '', clean)
+    # 2. Neutralize escape and delimiter symbols, SQL comment markers, and semicolons
+    clean = re.sub(r'[`"\'\\<>{}[\];]', '', clean)
+    clean = re.sub(r'--', '', clean)
     # 3. Block known prompt injection keywords
     injection_patterns = [
         r"(?i)ignore\s+(all\s+)?(previous|prior)\s+instructions",
@@ -52,9 +53,17 @@ def validate_sql_query(sql: str) -> str:
         if re.search(pattern, cleaned_sql, re.IGNORECASE):
             raise ValueError(f"Violación de Seguridad: Patrón prohibido detectado en la consulta SQL ({pattern}).")
             
-    # 3. Ensure table referenced is in curated schema or is a curated view
+    # 3. Block access to non-curated schemas (audit, raw, staging, pg_catalog, etc.)
+    forbidden_schemas = [r"\baudit\b", r"\braw\b", r"\bstaging\b", r"\bpg_catalog\b", r"\binformation_schema\b"]
+    for schema_pat in forbidden_schemas:
+        if re.search(schema_pat, cleaned_sql, re.IGNORECASE):
+            raise ValueError(f"Violación de Seguridad: Acceso prohibido al esquema no permitido ({schema_pat}).")
+
+    # 4. Ensure table referenced is in curated schema or is a curated view
     if "curated." not in cleaned_sql.lower() and "from gold_" not in cleaned_sql.lower():
         # Inject curated. if referencing table directly
         cleaned_sql = re.sub(r'(?i)\bFROM\s+gold_', 'FROM curated.gold_', cleaned_sql)
+        if "curated." not in cleaned_sql.lower():
+            raise ValueError("Violación de Seguridad: La consulta debe dirigirse exclusivamente al esquema curated.")
         
     return cleaned_sql

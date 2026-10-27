@@ -22,11 +22,11 @@ class Settings(BaseSettings):
     # Database URLs
     @property
     def READONLY_DATABASE_URL(self) -> str:
-        return f"postgresql://{self.SISMO_APP_USER}:{self.SISMO_APP_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return f"postgresql+psycopg2://{self.SISMO_APP_USER}:{self.SISMO_APP_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         
     @property
     def ADMIN_DATABASE_URL(self) -> str:
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # JWT Configuration
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "baa52f74fb2963994ed09af14b08ee64715c8e5c50622b8cd703abe59738ff07")
