@@ -41,7 +41,7 @@ export default function App() {
           api.getKpis().catch(() => null),
           api.getTimeseries().catch(() => null),
           api.getSeverity().catch(() => null),
-          api.getEvents({ limit: 100 }).catch(() => null)
+          api.getEvents({ limit: 10000 }).catch(() => null)
         ]);
 
         if (kpiRes) setKpis(kpiRes);
@@ -60,6 +60,13 @@ export default function App() {
 
     fetchInitialData();
   }, [currentUser]);
+
+  // RBAC Tab Protection Guard
+  useEffect(() => {
+    if (currentUser?.role === 'viewer' && ['lineage', 'governance'].includes(activeTab)) {
+      setActiveTab('control');
+    }
+  }, [currentUser, activeTab]);
 
   // Real-Time Server-Sent Events (SSE) Stream
   useEffect(() => {
@@ -89,9 +96,8 @@ export default function App() {
         try {
           const newEvent = JSON.parse(event.data);
           setEvents((prev) => {
-            const exists = prev.some((e) => e.id === newEvent.id);
-            if (exists) return prev;
-            return [newEvent, ...prev.slice(0, 99)];
+            const filtered = prev.filter((e) => e.id !== newEvent.id);
+            return [newEvent, ...filtered];
           });
           setLastEventTime(newEvent.event_time_utc);
         } catch (e) {

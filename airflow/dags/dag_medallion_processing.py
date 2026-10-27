@@ -134,17 +134,29 @@ def transform_bronze_to_silver(**context):
     except Exception as s3_err:
         logger.warning(f"[MEDALLION-SILVER] Could not write Silver Parquet to MinIO: {s3_err}")
 
-    # 5. Persistencia en Silver (PostgreSQL staging.earthquakes_refined)
+    # 5. Persistencia en Silver (PostgreSQL staging.earthquakes_refined) via execute_values bulk upsert
     conn = get_db_connection(role="transform")
     try:
+        from psycopg2.extras import execute_values
         with conn.cursor() as cur:
-            for r in enriched_records:
-                cur.execute("""
+            silver_tuples = [
+                (
+                    r["id"], r["magnitude"], r["place"], r["event_time_utc"], r["updated_time_utc"],
+                    r["longitude"], r["latitude"], r["depth_km"], r["tsunami_alert"], r["significance"],
+                    r["review_status"], r["mag_type"], r["event_type"], r["usgs_url"],
+                    r["quality_status"], r["quality_reasons"]
+                )
+                for r in enriched_records
+            ]
+            if silver_tuples:
+                execute_values(
+                    cur,
+                    """
                     INSERT INTO staging.earthquakes_refined (
                         id, magnitude, place, event_time_utc, updated_time_utc,
                         longitude, latitude, depth_km, tsunami_alert, significance,
                         review_status, mag_type, event_type, usgs_url, quality_status, quality_reasons
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES %s
                     ON CONFLICT (id) DO UPDATE SET
                         magnitude = EXCLUDED.magnitude,
                         place = EXCLUDED.place,
@@ -158,12 +170,10 @@ def transform_bronze_to_silver(**context):
                         quality_status = EXCLUDED.quality_status,
                         quality_reasons = EXCLUDED.quality_reasons,
                         processed_at = NOW();
-                """, (
-                    r["id"], r["magnitude"], r["place"], r["event_time_utc"], r["updated_time_utc"],
-                    r["longitude"], r["latitude"], r["depth_km"], r["tsunami_alert"], r["significance"],
-                    r["review_status"], r["mag_type"], r["event_type"], r["usgs_url"],
-                    r["quality_status"], r["quality_reasons"]
-                ))
+                    """,
+                    silver_tuples,
+                    page_size=2000
+                )
             conn.commit()
         logger.info(f"[MEDALLION-SILVER] Successfully synced {len(enriched_records)} records to staging.earthquakes_refined.")
     except Exception as e:
@@ -212,8 +222,7 @@ def transform_silver_to_gold(**context):
                            longitude, latitude, depth_km, tsunami_alert, significance,
                            review_status, quality_status
                     FROM staging.earthquakes_refined
-                    ORDER BY event_time_utc DESC
-                    LIMIT 500;
+                    ORDER BY event_time_utc DESC;
                 """)
             silver_records = cur.fetchall()
             
@@ -241,15 +250,27 @@ def transform_silver_to_gold(**context):
         except Exception as s3_err:
             logger.warning(f"[MEDALLION-GOLD] Could not write Gold Parquet to MinIO: {s3_err}")
 
-        # 3. Sincronización Idempotente a PostgreSQL curated.gold_earthquakes
+        # 3. Sincronización Idempotente a PostgreSQL curated.gold_earthquakes via execute_values
         with conn.cursor() as cur:
-            for r in gold_records:
-                cur.execute("""
+            gold_tuples = [
+                (
+                    r["id"], r["magnitude"], r["place"], r["event_time_utc"], r["updated_time_utc"],
+                    r["longitude"], r["latitude"], r["depth_km"], r["tsunami_alert"], r["significance"],
+                    r["review_status"], r["severity_label"], r["is_anomaly"], r["anomaly_explanation"],
+                    r["quality_status"]
+                )
+                for r in gold_records
+            ]
+            if gold_tuples:
+                from psycopg2.extras import execute_values
+                execute_values(
+                    cur,
+                    """
                     INSERT INTO curated.gold_earthquakes (
                         id, magnitude, place, event_time_utc, updated_time_utc,
                         longitude, latitude, depth_km, tsunami_alert, significance,
                         review_status, severity_label, is_anomaly, anomaly_explanation, quality_status, updated_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                    ) VALUES %s
                     ON CONFLICT (id) DO UPDATE SET
                         magnitude = EXCLUDED.magnitude,
                         place = EXCLUDED.place,
@@ -265,24 +286,33 @@ def transform_silver_to_gold(**context):
                         anomaly_explanation = EXCLUDED.anomaly_explanation,
                         quality_status = EXCLUDED.quality_status,
                         updated_at = NOW();
-                """, (
-                    r["id"], r["magnitude"], r["place"], r["event_time_utc"], r["updated_time_utc"],
-                    r["longitude"], r["latitude"], r["depth_km"], r["tsunami_alert"], r["significance"],
-                    r["review_status"], r["severity_label"], r["is_anomaly"], r["anomaly_explanation"],
-                    r["quality_status"]
-                ))
+                    """,
+                    gold_tuples,
+                    template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())",
+                    page_size=2000
+                )
             
             # Registrar anomalías detectadas
-            for a in detected_anomalies:
-                cur.execute("""
-                    INSERT INTO curated.gold_anomalies (
-                        earthquake_id, magnitude, place, z_score, is_swarm, anomaly_explanation, detected_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT DO NOTHING;
-                """, (
+            anomaly_tuples = [
+                (
                     a["earthquake_id"], a["magnitude"], a["place"], a["z_score"],
                     a["is_swarm"], a["anomaly_explanation"], a["detected_at"]
-                ))
+                )
+                for a in detected_anomalies
+            ]
+            if anomaly_tuples:
+                from psycopg2.extras import execute_values
+                execute_values(
+                    cur,
+                    """
+                    INSERT INTO curated.gold_anomalies (
+                        earthquake_id, magnitude, place, z_score, is_swarm, anomaly_explanation, detected_at
+                    ) VALUES %s
+                    ON CONFLICT DO NOTHING;
+                    """,
+                    anomaly_tuples,
+                    page_size=2000
+                )
 
             # 4. Actualizar Métricas de Agregación Horarias en curated.gold_hourly_kpis
             cur.execute("""

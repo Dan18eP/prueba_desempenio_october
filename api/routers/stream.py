@@ -30,7 +30,7 @@ async def event_generator(request: Request):
     # Send connection established event
     yield f"event: connected\ndata: {json.dumps({'message': 'SismoWatch Real-Time Stream Connected', 'timestamp': datetime.now(timezone.utc).isoformat()})}\n\n"
 
-    last_seen_id = None
+    last_poll_time = datetime.now(timezone.utc)
 
     # Step 1: Send initial snapshot
     try:
@@ -38,20 +38,22 @@ async def event_generator(request: Request):
             query = text("""
                 SELECT 
                     id, magnitude, place, event_time_utc, longitude, latitude, depth_km,
-                    tsunami_alert, severity_label, is_anomaly, anomaly_explanation, quality_status
+                    tsunami_alert, severity_label, is_anomaly, anomaly_explanation, quality_status, updated_at
                 FROM curated.gold_earthquakes
                 ORDER BY event_time_utc DESC
-                LIMIT 10
+                LIMIT 50
             """)
             initial_rows = db.execute(query).mappings().fetchall()
             events = [dict(r) for r in initial_rows]
             if events:
-                last_seen_id = events[0]["id"]
+                # Set last poll to the latest updated_at or current time
+                max_updated = max([r["updated_at"] for r in initial_rows if r.get("updated_at")] or [last_poll_time])
+                last_poll_time = max_updated
             yield f"event: initial_batch\ndata: {json.dumps(events, default=json_serial)}\n\n"
     except Exception as e:
         yield f": error fetching initial batch: {str(e)}\n\n"
 
-    # Step 2: Continuous loop checking for new events
+    # Step 2: Continuous loop checking for new or updated events
     while True:
         # Check if client disconnected
         if await request.is_disconnected():
@@ -59,26 +61,22 @@ async def event_generator(request: Request):
 
         try:
             with SessionLocalReadOnly() as db:
-                if last_seen_id:
-                    query = text("""
-                        SELECT 
-                            id, magnitude, place, event_time_utc, longitude, latitude, depth_km,
-                            tsunami_alert, severity_label, is_anomaly, anomaly_explanation, quality_status
-                        FROM curated.gold_earthquakes
-                        WHERE event_time_utc > (
-                            SELECT event_time_utc FROM curated.gold_earthquakes WHERE id = :last_id LIMIT 1
-                        )
-                        ORDER BY event_time_utc ASC
-                        LIMIT 10
-                    """)
-                    new_rows = db.execute(query, {"last_id": last_seen_id}).mappings().fetchall()
-                else:
-                    new_rows = []
+                query = text("""
+                    SELECT 
+                        id, magnitude, place, event_time_utc, longitude, latitude, depth_km,
+                        tsunami_alert, severity_label, is_anomaly, anomaly_explanation, quality_status, updated_at
+                    FROM curated.gold_earthquakes
+                    WHERE updated_at > :last_poll
+                    ORDER BY updated_at ASC
+                    LIMIT 50
+                """)
+                new_rows = db.execute(query, {"last_poll": last_poll_time}).mappings().fetchall()
 
                 if new_rows:
                     for r in new_rows:
                         payload = dict(r)
-                        last_seen_id = r["id"]
+                        if payload.get("updated_at") and payload["updated_at"] > last_poll_time:
+                            last_poll_time = payload["updated_at"]
                         yield f"event: earthquake_update\ndata: {json.dumps(payload, default=json_serial)}\n\n"
                 else:
                     # Keep-alive heartbeat

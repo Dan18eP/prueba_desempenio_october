@@ -135,6 +135,16 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
             )
 
         explanation = parsed.get("explanation") or f"Consulta ejecutada con éxito. Se obtuvieron {len(rows)} registros."
+        
+        # Inyectar datos numéricos concretos de la base de datos para máxima interactividad
+        if len(rows) == 1 and len(rows[0]) == 1:
+            val = rows[0][0]
+            explanation = f"Se registran **{val}** en la base de datos (capa Gold). {explanation}"
+        elif rows and len(rows) <= 8 and len(rows[0]) >= 2:
+            summary_bullets = "\n".join([f"- **{r[0]}**: {r[1]}" for r in rows])
+            explanation = f"{explanation}\n\nDatos obtenidos en Capa Gold:\n{summary_bullets}"
+        elif rows:
+            explanation = f"{explanation}\n\nSe encontraron {len(rows)} registros coincidentes en la capa Gold."
         latency_ms = int((time.time() - start_time) * 1000)
 
         # 4. Registrar en audit.ai_executions

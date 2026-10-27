@@ -120,6 +120,7 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET_KEY}
       AIRFLOW__WEBSERVER__WORKERS: "2"
+      OLLAMA_BASE_URL: http://host.docker.internal:11435
       _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-boto3 psycopg2-binary requests pandas pyarrow pandera pydantic openlineage-airflow}
     ports:
       - "8080:8080"
@@ -128,6 +129,8 @@ services:
       - ./airflow/include:/opt/airflow/include
       - ./airflow/include:/home/airflow/.local/lib/python3.11/site-packages/airflow/include
       - ./airflow/logs:/opt/airflow/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
@@ -152,6 +155,7 @@ services:
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-boto3 psycopg2-binary requests pandas pyarrow pandera pydantic openlineage-airflow}
+      OLLAMA_BASE_URL: http://host.docker.internal:11435
       # S3 / MinIO Configuration for PySpark tasks
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-sismowatch_admin}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-sismowatch_secret_minio_2026}
@@ -161,6 +165,8 @@ services:
       - ./airflow/include:/opt/airflow/include
       - ./airflow/include:/home/airflow/.local/lib/python3.11/site-packages/airflow/include
       - ./airflow/logs:/opt/airflow/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
@@ -206,6 +212,8 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       OLLAMA_BASE_URL: http://host.docker.internal:11435
+    volumes:
+      - ./api:/api
     ports:
       - "8000:8000"
     extra_hosts:
@@ -228,12 +236,15 @@ services:
     restart: always
     depends_on:
       - api
+    volumes:
+      - ./web:/app
+      - /app/node_modules
     ports:
       - "3000:3000"
     environment:
       VITE_API_URL: http://localhost:8000
       VITE_OPENMETADATA_URL: http://localhost:8585
-      VITE_CARTO_API_KEY: ${VITE_CARTO_API_KEY:-cb1_4vzx_1_c2e8d37b1e85e3709ad52c32}
+      VITE_CARTO_API_KEY: ${VITE_CARTO_API_KEY}
     deploy:
       resources:
         limits:

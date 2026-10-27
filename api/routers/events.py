@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/events", tags=["Earthquake Events"])
 
 @router.get("")
 def list_events(
-    limit: int = Query(50, ge=1, le=500),
+    limit: int = Query(500, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     min_magnitude: Optional[float] = Query(None, ge=0.0, le=10.0),
     severity: Optional[str] = Query(None),

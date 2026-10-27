@@ -1,5 +1,6 @@
 import React from 'react';
 import { Activity, Shield, Database, Cpu, Radio, User, LogIn, LogOut, RefreshCw } from 'lucide-react';
+import { formatBogotaTimeOnly } from '../utils/date';
 
 export default function Header({
   activeTab,
@@ -11,6 +12,8 @@ export default function Header({
   isLive,
   lastEventTime
 }) {
+  const isAdmin = currentUser?.role === 'admin';
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#0a0e16]/95 backdrop-blur-md border-b border-[#262a33] h-16 px-6 flex items-center justify-between">
       {/* Brand & Live Stream Indicator */}
@@ -43,13 +46,13 @@ export default function Header({
           </div>
           {lastEventTime && (
             <span className="text-gray-400 text-[11px]">
-              Último sismo: {new Date(lastEventTime).toLocaleTimeString()}
+              Ultimo sismo: {formatBogotaTimeOnly(lastEventTime)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Center Navigation Tabs */}
+      {/* Center Navigation Tabs (Strict RBAC-filtered) */}
       <nav className="hidden lg:flex items-center gap-1 bg-[#141822] p-1 rounded-xl border border-[#262a33] text-xs font-medium">
         <button
           onClick={() => setActiveTab('control')}
@@ -63,17 +66,19 @@ export default function Header({
           <span>Centro de Control</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('lineage')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
-            activeTab === 'lineage'
-              ? 'bg-indigo-600/30 text-indigo-300 font-semibold border border-indigo-500/40 shadow-inner'
-              : 'text-gray-400 hover:text-white hover:bg-[#1f2430]'
-          }`}
-        >
-          <Database className="w-3.5 h-3.5" />
-          <span>Linaje de Datos</span>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('lineage')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+              activeTab === 'lineage'
+                ? 'bg-indigo-600/30 text-indigo-300 font-semibold border border-indigo-500/40 shadow-inner'
+                : 'text-gray-400 hover:text-white hover:bg-[#1f2430]'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>Linaje de Datos</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('agent')}
@@ -84,42 +89,46 @@ export default function Header({
           }`}
         >
           <Cpu className="w-3.5 h-3.5" />
-          <span>Agente IA & Analítica</span>
+          <span>Agente IA & Analitica</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('governance')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
-            activeTab === 'governance'
-              ? 'bg-indigo-600/30 text-indigo-300 font-semibold border border-indigo-500/40 shadow-inner'
-              : 'text-gray-400 hover:text-white hover:bg-[#1f2430]'
-          }`}
-        >
-          <Shield className="w-3.5 h-3.5" />
-          <span>Gobernanza & Calidad</span>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('governance')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+              activeTab === 'governance'
+                ? 'bg-indigo-600/30 text-indigo-300 font-semibold border border-indigo-500/40 shadow-inner'
+                : 'text-gray-400 hover:text-white hover:bg-[#1f2430]'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Gobernanza & Calidad</span>
+          </button>
+        )}
       </nav>
 
       {/* Right Tools & User Profile */}
       <div className="flex items-center gap-3">
-        {/* OpenMetadata external quick link */}
-        <a
-          href="http://localhost:8585"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Abrir Visor de Linaje OpenMetadata"
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#141822] hover:bg-[#1f2430] border border-[#262a33] text-xs font-mono text-indigo-300 transition-colors"
-        >
-          <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
-          <span>OpenMetadata :8585</span>
-        </a>
+        {/* OpenMetadata external quick link (Admin only) */}
+        {isAdmin && (
+          <a
+            href="http://localhost:8585"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Abrir Visor de Linaje OpenMetadata"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#141822] hover:bg-[#1f2430] border border-[#262a33] text-xs font-mono text-indigo-300 transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+            <span>OpenMetadata :8585</span>
+          </a>
+        )}
 
         {/* Backfill button (Admin only) */}
-        {currentUser?.role === 'admin' && (
+        {isAdmin && (
           <button
             onClick={onOpenBackfill}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-mono text-amber-300 transition-colors"
-            title="Ejecutar backfill histórico de sismos"
+            title="Ejecutar backfill historico de sismos"
           >
             <RefreshCw className="w-3 h-3" />
             <span>Backfill</span>
@@ -131,13 +140,13 @@ export default function Header({
           <div className="flex items-center gap-2 pl-3 border-l border-[#262a33]">
             <div className="flex flex-col text-right">
               <span className="text-xs font-medium text-white">{currentUser.username}</span>
-              <span className={`text-[10px] font-mono uppercase font-bold ${currentUser.role === 'admin' ? 'text-amber-400' : 'text-indigo-400'}`}>
-                ROL: {currentUser.role}
+              <span className={`text-[9px] font-mono uppercase font-bold tracking-wider ${isAdmin ? 'text-amber-400' : 'text-blue-400'}`}>
+                {isAdmin ? 'ADMINISTRADOR (FULL RBAC)' : 'OPERADOR TACTICO (READ ONLY)'}
               </span>
             </div>
             <button
               onClick={onLogout}
-              title="Cerrar Sesión"
+              title="Cerrar Sesion"
               className="p-1.5 rounded-lg bg-[#141822] hover:bg-red-500/20 text-gray-400 hover:text-red-400 border border-[#262a33] transition-colors"
             >
               <LogOut className="w-4 h-4" />

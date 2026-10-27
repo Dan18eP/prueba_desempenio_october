@@ -13,8 +13,33 @@ def execute_fallback_intent(prompt: str, db: Session, latency_ms: int = 15) -> d
     p = prompt.lower()
     logger.info(f"[CIRCUIT_BREAKER] Executing deterministic fallback for prompt: '{prompt}'")
 
+    # Intent 0: Conteo General y Totales de la Capa Gold
+    if any(k in p for k in ["cuanto", "cuánto", "total", "registrado", "catálogo", "catalogo", "cantidad", "resumen"]):
+        sql = """
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE tsunami_alert = TRUE) as tsunamis,
+                COUNT(*) FILTER (WHERE is_anomaly = TRUE) as anomalies,
+                COALESCE(MAX(magnitude), 0.0) as max_mag
+            FROM curated.gold_earthquakes;
+        """
+        row = db.execute(text(sql)).fetchone()
+        tot = row[0] if row else 0
+        tsu = row[1] if row else 0
+        ano = row[2] if row else 0
+        mx = float(row[3]) if row else 0.0
+        return {
+            "answer": f"Actualmente se registran {tot} eventos sísmicos en la capa Gold. De ellos, {tsu} cuentan con alerta de tsunami activa, {ano} presentan anomalías estadísticas y la magnitud máxima registrada es {mx}.",
+            "chart": {"type": "none"},
+            "sql_executed": sql.strip(),
+            "suggested_questions": ["¿Hay sismos con alerta de tsunami?", "Ver distribución por severidad", "Sismos más fuertes"],
+            "model_used": "Operational-Data-Engine",
+            "latency_ms": latency_ms,
+            "fallback_active": True
+        }
+
     # Intent 1: Distribución por Severidad / Categorías
-    if any(k in p for k in ["severidad", "categoría", "categoria", "distribucion", "distribución"]):
+    elif any(k in p for k in ["severidad", "categoría", "categoria", "distribucion", "distribución"]):
         sql = """
             SELECT severity_label, COUNT(*) as count 
             FROM curated.gold_earthquakes 

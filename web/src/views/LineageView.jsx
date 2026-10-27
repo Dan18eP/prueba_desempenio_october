@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Database, ArrowRight, ExternalLink, ShieldCheck, CheckCircle2, Layers } from 'lucide-react';
 import { api } from '../api';
+import { formatBogotaDate } from '../utils/date';
 
 export default function LineageView() {
   const [lineageData, setLineageData] = useState(null);
@@ -191,7 +192,7 @@ export default function LineageView() {
                     </td>
                     <td className="py-3 px-4 text-center text-emerald-400 font-bold">{r.loss_count}</td>
                     <td className="py-3 px-4 text-right text-gray-400">
-                      {new Date(r.reconciled_at).toLocaleString()}
+                      {formatBogotaDate(r.reconciled_at)}
                     </td>
                   </tr>
                 ))

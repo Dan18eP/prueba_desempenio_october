@@ -209,16 +209,6 @@ export default function AiAgentView({ currentUser }) {
                 >
                   <p className="leading-relaxed">{m.text}</p>
 
-                  {/* Render SQL executed */}
-                  {m.sql && (
-                    <div className="mt-2.5 pt-2 border-t border-[#262a33] font-mono text-[10px] text-emerald-400 bg-[#0a0e16] p-2 rounded-lg">
-                      <div className="text-gray-500 text-[9px] uppercase font-bold mb-1">
-                        SQL Ejecutado (Solo Lectura):
-                      </div>
-                      <code>{m.sql}</code>
-                    </div>
-                  )}
-
                   {/* Render Declarative Chart if present */}
                   {renderDeclarativeChart(m.chart)}
 

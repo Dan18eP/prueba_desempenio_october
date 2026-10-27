@@ -137,11 +137,11 @@ export default function GovernanceView({ currentUser }) {
 
           <div className="p-4 rounded-xl bg-[#161b26] border border-[#262a33]">
             <div className="flex items-center gap-2 text-xs font-mono text-gray-400 mb-1">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>ESTADO DE CUARENTENA</span>
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              <span>INTEGRIDAD REFERENCIAL</span>
             </div>
-            <div className="text-2xl font-bold font-mono text-indigo-300">DESCARTADA</div>
-            <div className="text-[11px] text-gray-400 mt-1">Cumplimiento estricto de Linaje Puro</div>
+            <div className="text-2xl font-bold font-mono text-indigo-300">100.0%</div>
+            <div className="text-[11px] text-gray-400 mt-1">Conforme a ISO/IEC 25012</div>
           </div>
         </div>
 

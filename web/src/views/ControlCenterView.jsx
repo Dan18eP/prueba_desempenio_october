@@ -1,36 +1,46 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  BarElement,
   PointElement,
   LineElement,
-  BarElement,
   ArcElement,
   Title,
   Tooltip,
-  Legend,
-  Filler
+  Legend
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { Pause, Play, Filter, AlertTriangle, Radio, MapPin, Compass } from 'lucide-react';
+import {
+  Compass,
+  Radio,
+  Filter,
+  Play,
+  Pause,
+  Layers,
+  Activity,
+  AlertTriangle,
+  Waves
+} from 'lucide-react';
+import { formatBogotaDate, formatBogotaTimeOnly } from '../utils/date';
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  BarElement,
   PointElement,
   LineElement,
-  BarElement,
   ArcElement,
   Title,
   Tooltip,
-  Legend,
-  Filler
+  Legend
 );
 
 export default function ControlCenterView({
-  events,
+  events = [],
   timeseries,
   severityData,
   isPaused,
@@ -43,26 +53,33 @@ export default function ControlCenterView({
   const markersLayerRef = useRef(null);
 
   const [minMagFilter, setMinMagFilter] = useState(0.0);
+  const [tsunamiOnlyFilter, setTsunamiOnlyFilter] = useState(false);
+  const [activeChartTab, setActiveChartTab] = useState('overview'); // 'overview' | 'depth_regions'
 
-  // Initialize Leaflet Map
+  // Initialize Leaflet Map with Canvas renderer for high throughput
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Tactical dark map tiles (CARTO Basemaps Dark Matter with user API Key)
+    // Tactical dark map tiles (CARTO Basemaps Dark Matter)
     const map = L.map(mapContainerRef.current, {
       center: [15.0, -90.0],
       zoom: 3,
       minZoom: 2,
       maxZoom: 12,
-      attributionControl: false
+      attributionControl: false,
+      preferCanvas: true // Hardware-accelerated canvas rendering for 10k points
     });
 
-    const cartoKey = import.meta.env.VITE_CARTO_API_KEY || 'cb1_4vzx_1_c2e8d37b1e85e3709ad52c32';
-    L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`, {
+    const cartoKey = import.meta.env.VITE_CARTO_API_KEY || '';
+    const tileUrl = cartoKey
+      ? `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png';
+
+    L.tileLayer(tileUrl, {
       maxZoom: 19,
       subdomains: 'abcd',
-      attribution: '© CARTO, © OpenStreetMap'
+      attribution: 'CARTO Basemaps, USGS Real-Time'
     }).addTo(map);
 
     markersLayerRef.current = L.layerGroup().addTo(map);
@@ -74,26 +91,33 @@ export default function ControlCenterView({
     };
   }, []);
 
-  // Update Map Markers when events change
+  // Filtered events based on magnitude and tsunami toggle
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      const matchMag = e.magnitude >= minMagFilter;
+      const matchTsunami = !tsunamiOnlyFilter || e.tsunami_alert;
+      return matchMag && matchTsunami;
+    });
+  }, [events, minMagFilter, tsunamiOnlyFilter]);
+
+  // Update Map Markers
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
     markersLayerRef.current.clearLayers();
 
-    const filtered = events.filter((e) => e.magnitude >= minMagFilter);
-
-    filtered.forEach((e) => {
+    filteredEvents.forEach((e) => {
       if (!e.latitude || !e.longitude) return;
 
       const isTsunami = e.tsunami_alert;
       const isAnomaly = e.is_anomaly;
 
-      // Color coding by magnitude
-      let color = '#10b981'; // green < 4
+      // Color coding by magnitude and critical risk
+      let color = '#10b981'; // green < 3.5
       if (e.magnitude >= 6.8 || isTsunami) color = '#ef4444'; // critical red
       else if (e.magnitude >= 5.0) color = '#f59e0b'; // orange
       else if (e.magnitude >= 3.5) color = '#eab308'; // yellow
 
-      const radius = Math.max(5, Math.min(22, (e.magnitude || 2) * 2.8));
+      const radius = Math.max(4, Math.min(22, (e.magnitude || 2) * 2.8));
 
       const marker = L.circleMarker([e.latitude, e.longitude], {
         radius: radius,
@@ -101,20 +125,21 @@ export default function ControlCenterView({
         color: isTsunami ? '#ffffff' : color,
         weight: isTsunami ? 2.5 : 1,
         opacity: 0.9,
-        fillOpacity: isTsunami ? 0.85 : 0.6
+        fillOpacity: isTsunami ? 0.9 : 0.6
       });
 
       const popupHtml = `
-        <div style="font-family: inherit; font-size: 12px; color: #0f172a; padding: 4px;">
-          <div style="font-weight: bold; font-size: 14px; margin-bottom: 2px;">
+        <div style="font-family: monospace; font-size: 11px; color: #0f172a; padding: 4px; min-width: 200px;">
+          <div style="font-weight: bold; font-size: 13px; margin-bottom: 2px;">
             M ${e.magnitude.toFixed(1)} — ${e.severity_label}
           </div>
-          <div style="color: #475569; margin-bottom: 4px;">${e.place}</div>
-          <div style="font-family: monospace; font-size: 11px;">
+          <div style="color: #334155; margin-bottom: 4px;">${e.place}</div>
+          <div style="border-top: 1px solid #cbd5e1; padding-top: 4px; line-height: 1.4;">
             Profundidad: <strong>${e.depth_km} km</strong><br/>
-            Hora: <strong>${new Date(e.event_time_utc).toLocaleTimeString()}</strong><br/>
-            ${isTsunami ? '<span style="color: #dc2626; font-weight: bold;">⚠️ ALERTA TSUNAMI</span><br/>' : ''}
-            ${isAnomaly ? '<span style="color: #9333ea; font-weight: bold;">⚡ ANOMALÍA DETECTADA</span>' : ''}
+            Hora Bogota: <strong>${formatBogotaTimeOnly(e.event_time_utc)}</strong><br/>
+            Fecha: <strong>${formatBogotaDate(e.event_time_utc, false)}</strong><br/>
+            ${isTsunami ? '<div style="color: #dc2626; font-weight: bold; margin-top: 2px;">[ALERTA TSUNAMI ACTIVA]</div>' : ''}
+            ${isAnomaly ? '<div style="color: #7c3aed; font-weight: bold; margin-top: 2px;">[ANOMALIA ESTADISTICA]</div>' : ''}
           </div>
         </div>
       `;
@@ -122,7 +147,7 @@ export default function ControlCenterView({
       marker.bindPopup(popupHtml);
       markersLayerRef.current.addLayer(marker);
     });
-  }, [events, minMagFilter]);
+  }, [filteredEvents]);
 
   // Center map on selected event
   useEffect(() => {
@@ -133,6 +158,44 @@ export default function ControlCenterView({
       });
     }
   }, [selectedEvent]);
+
+  // Operational Analytics Derived Directly from Events (100% Real Data)
+  const depthDistribution = useMemo(() => {
+    let superficial = 0; // < 70 km
+    let intermedio = 0;  // 70 - 300 km
+    let profundo = 0;    // > 300 km
+
+    events.forEach((e) => {
+      const d = Number(e.depth_km) || 0;
+      if (d < 70) superficial++;
+      else if (d <= 300) intermedio++;
+      else profundo++;
+    });
+
+    return {
+      labels: ['Superficial (< 70km)', 'Intermedio (70-300km)', 'Profundo (> 300km)'],
+      data: [superficial, intermedio, profundo]
+    };
+  }, [events]);
+
+  const topRegions = useMemo(() => {
+    const regionCounts = {};
+    events.forEach((e) => {
+      if (!e.place) return;
+      const parts = e.place.split(',');
+      const region = (parts[parts.length - 1] || 'Global').trim();
+      regionCounts[region] = (regionCounts[region] || 0) + 1;
+    });
+
+    const sorted = Object.entries(regionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    return {
+      labels: sorted.map((s) => s[0]),
+      data: sorted.map((s) => s[1])
+    };
+  }, [events]);
 
   // Chart 1: Hourly Timeseries
   const timeseriesChartData = {
@@ -179,7 +242,7 @@ export default function ControlCenterView({
     labels: severityData?.labels || ['Micro', 'Menor', 'Moderado', 'Fuerte'],
     datasets: [
       {
-        data: severityData?.data || [10, 8, 2, 0],
+        data: severityData?.data || [0, 0, 0, 0],
         backgroundColor: [
           'rgba(16, 185, 129, 0.7)',
           'rgba(234, 179, 8, 0.7)',
@@ -193,7 +256,39 @@ export default function ControlCenterView({
     ]
   };
 
-  const severityOptions = {
+  // Chart 3: Depth Distribution
+  const depthChartData = {
+    labels: depthDistribution.labels,
+    datasets: [
+      {
+        data: depthDistribution.data,
+        backgroundColor: [
+          'rgba(239, 68, 68, 0.75)',
+          'rgba(245, 158, 11, 0.75)',
+          'rgba(59, 130, 246, 0.75)'
+        ],
+        borderWidth: 1,
+        borderColor: '#12161f'
+      }
+    ]
+  };
+
+  // Chart 4: Top Regions Bar Chart
+  const topRegionsChartData = {
+    labels: topRegions.labels,
+    datasets: [
+      {
+        label: 'Sismos',
+        data: topRegions.data,
+        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+        borderColor: '#10b981',
+        borderWidth: 1,
+        borderRadius: 4
+      }
+    ]
+  };
+
+  const chartCommonOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -201,18 +296,18 @@ export default function ControlCenterView({
         position: 'right',
         labels: {
           color: '#cbd5e1',
-          font: { family: 'monospace', size: 11 },
-          boxWidth: 12
+          font: { family: 'monospace', size: 10 },
+          boxWidth: 10
         }
       }
     }
   };
 
-  const filteredEvents = events.filter((e) => e.magnitude >= minMagFilter);
+  const tsunamiEventsCount = events.filter((e) => e.tsunami_alert).length;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Left 7 Columns: Tactical Map & Analytics */}
+      {/* Left 7 Columns: Tactical Map & Analytical Breakdown */}
       <div className="lg:col-span-7 flex flex-col gap-6">
         {/* Leaflet Geospatial View */}
         <div className="rounded-2xl bg-[#12161f] border border-[#262a33] p-4 flex flex-col shadow-lg">
@@ -220,7 +315,7 @@ export default function ControlCenterView({
             <div className="flex items-center gap-2">
               <Compass className="w-4 h-4 text-indigo-400" />
               <span className="text-sm font-bold text-white tracking-wide">
-                Mapa Táctico Geoespacial (USGS Live)
+                Mapa Tactico Geoespacial (USGS Live)
               </span>
             </div>
             <div className="flex items-center gap-3 text-xs font-mono text-gray-400">
@@ -245,36 +340,89 @@ export default function ControlCenterView({
           />
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="rounded-2xl bg-[#12161f] border border-[#262a33] p-4 flex flex-col shadow-lg">
-            <div className="text-xs font-mono uppercase text-gray-400 mb-2">
-              Actividad Sísmica Horaria (24h)
+        {/* Dynamic Analytics Panel with Tab Switcher */}
+        <div className="rounded-2xl bg-[#12161f] border border-[#262a33] p-4 flex flex-col shadow-lg">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#262a33]">
+            <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-white">
+              <Activity className="w-4 h-4 text-indigo-400" />
+              <span>Analitica Operacional de Sismicidad Global</span>
             </div>
-            <div className="h-44">
-              <Bar data={timeseriesChartData} options={timeseriesOptions} />
+            <div className="flex items-center gap-1 bg-[#0a0e16] p-1 rounded-lg border border-[#262a33] text-xs font-mono">
+              <button
+                onClick={() => setActiveChartTab('overview')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  activeChartTab === 'overview'
+                    ? 'bg-indigo-600 text-white font-bold'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Frecuencia & Severidad
+              </button>
+              <button
+                onClick={() => setActiveChartTab('depth_regions')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  activeChartTab === 'depth_regions'
+                    ? 'bg-indigo-600 text-white font-bold'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Profundidad & Regiones Top
+              </button>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-[#12161f] border border-[#262a33] p-4 flex flex-col shadow-lg">
-            <div className="text-xs font-mono uppercase text-gray-400 mb-2">
-              Distribución por Severidad
+          {activeChartTab === 'overview' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 rounded-xl bg-[#0e121a] border border-[#262a33]">
+                <div className="text-[11px] font-mono uppercase text-gray-400 mb-2">
+                  Actividad Sismica Horaria (24h)
+                </div>
+                <div className="h-40">
+                  <Bar data={timeseriesChartData} options={timeseriesOptions} />
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#0e121a] border border-[#262a33]">
+                <div className="text-[11px] font-mono uppercase text-gray-400 mb-2">
+                  Distribucion por Severidad (ISO)
+                </div>
+                <div className="h-40 flex items-center justify-center">
+                  <Doughnut data={severityChartData} options={chartCommonOptions} />
+                </div>
+              </div>
             </div>
-            <div className="h-44 flex items-center justify-center">
-              <Doughnut data={severityChartData} options={severityOptions} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 rounded-xl bg-[#0e121a] border border-[#262a33]">
+                <div className="text-[11px] font-mono uppercase text-gray-400 mb-2">
+                  Distribucion por Profundidad Sismica
+                </div>
+                <div className="h-40 flex items-center justify-center">
+                  <Doughnut data={depthChartData} options={chartCommonOptions} />
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#0e121a] border border-[#262a33]">
+                <div className="text-[11px] font-mono uppercase text-gray-400 mb-2">
+                  Top 5 Zonas Sismicas con Mayor Actividad
+                </div>
+                <div className="h-40">
+                  <Bar data={topRegionsChartData} options={timeseriesOptions} />
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Right 5 Columns: Real-Time SSE Stream Feed */}
       <div className="lg:col-span-5 flex flex-col rounded-2xl bg-[#12161f] border border-[#262a33] p-5 shadow-lg h-[640px]">
         {/* Stream Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#262a33]">
+        <div className="flex items-center justify-between pb-3 border-b border-[#262a33]">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
             <span className="text-sm font-bold text-white tracking-wide">
-              Telemetría SSE en Vivo
+              Telemetria en Tiempo Real
             </span>
             <span className="text-xs font-mono text-gray-400">
               ({filteredEvents.length} eventos)
@@ -297,12 +445,23 @@ export default function ControlCenterView({
         </div>
 
         {/* Filter Toolbar */}
-        <div className="py-3 flex items-center justify-between text-xs font-mono border-b border-[#262a33]">
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-gray-400">Filtro Magnitud Mínima:</span>
-          </div>
+        <div className="py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono border-b border-[#262a33]">
+          {/* Tsunami Dedicated Filter */}
+          <button
+            onClick={() => setTsunamiOnlyFilter(!tsunamiOnlyFilter)}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-bold transition-colors ${
+              tsunamiOnlyFilter
+                ? 'bg-red-600 text-white shadow-md'
+                : 'bg-red-950/30 text-red-300 border border-red-500/30 hover:bg-red-900/40'
+            }`}
+          >
+            <Waves className="w-3 h-3" />
+            <span>Alertas Tsunami ({tsunamiEventsCount})</span>
+          </button>
+
+          {/* Magnitude Threshold Filter */}
           <div className="flex items-center gap-1">
+            <span className="text-gray-500 text-[11px] mr-1">Mag &ge;</span>
             {[0, 2.5, 4.0, 5.5].map((val) => (
               <button
                 key={val}
@@ -313,7 +472,7 @@ export default function ControlCenterView({
                     : 'bg-[#181c24] text-gray-400 hover:text-white'
                 }`}
               >
-                &ge; {val.toFixed(1)}
+                {val.toFixed(1)}
               </button>
             ))}
           </div>
@@ -323,7 +482,7 @@ export default function ControlCenterView({
         <div className="flex-1 overflow-y-auto space-y-2.5 pt-3 pr-1">
           {filteredEvents.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-500 text-xs font-mono">
-              <span>No hay eventos que cumplan con el filtro actual</span>
+              <span>No hay eventos que cumplan con los filtros seleccionados</span>
             </div>
           ) : (
             filteredEvents.map((e) => {
@@ -356,15 +515,15 @@ export default function ControlCenterView({
                             : 'bg-emerald-600/30 text-emerald-300'
                         }`}
                       >
-                        M {e.magnitude.toFixed(1)}
+                        M {Number(e.magnitude).toFixed(1)}
                       </span>
-                      <span className="text-xs font-medium text-white truncate max-w-[200px]">
+                      <span className="text-xs font-medium text-white truncate max-w-[210px]">
                         {e.place}
                       </span>
                     </div>
 
                     <div className="text-[11px] font-mono text-gray-400 shrink-0">
-                      {new Date(e.event_time_utc).toLocaleTimeString()}
+                      {formatBogotaTimeOnly(e.event_time_utc)}
                     </div>
                   </div>
 
@@ -378,15 +537,14 @@ export default function ControlCenterView({
                     <div className="flex items-center gap-1.5">
                       {isTsunami && (
                         <span className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[9px] font-bold">
-                          TSUNAMI
+                          ALERTA TSUNAMI
                         </span>
                       )}
                       {isAnomaly && (
-                        <span className="px-1.5 py-0.5 rounded bg-purple-600/30 text-purple-300 border border-purple-500/30 text-[9px]">
-                          ANOMALÍA
+                        <span className="px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-300 border border-purple-500/30 text-[9px] font-bold">
+                          ANOMALIA
                         </span>
                       )}
-                      <span className="text-emerald-400 text-[10px]">VERIFICADO</span>
                     </div>
                   </div>
                 </div>
