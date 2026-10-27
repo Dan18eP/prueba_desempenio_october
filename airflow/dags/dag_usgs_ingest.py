@@ -7,6 +7,7 @@ from airflow.operators.python import PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.include.config import (
     USGS_REALTIME_FEED_URL,
+    USGS_HISTORICAL_QUERY_URL,
     MINIO_BUCKET,
     get_s3_client,
     get_db_connection
@@ -58,8 +59,48 @@ def fetch_and_store_bronze(**context):
         raise e
         
     features = geojson_data.get("features", [])
+
+    # 1.1 CDC Downtime Recovery check (>60 min gap since last raw batch)
+    try:
+        conn = get_db_connection(role="ingest")
+        with conn.cursor() as cur:
+            cur.execute("SELECT ingested_at FROM raw.earthquakes_raw_batches ORDER BY ingested_at DESC LIMIT 1;")
+            row = cur.fetchone()
+            if row and row.get("ingested_at"):
+                last_ingested = row["ingested_at"]
+                if last_ingested.tzinfo is None:
+                    last_ingested = last_ingested.replace(tzinfo=timezone.utc)
+                gap_minutes = (now_utc - last_ingested).total_seconds() / 60.0
+                if gap_minutes > 60:
+                    logger.warning(f"[INGEST CDC] Detected downtime gap of {gap_minutes:.1f} mins since last batch ({last_ingested.isoformat()}). Triggering CDC recovery with updatedafter.")
+                    cdc_resp = requests.get(
+                        USGS_HISTORICAL_QUERY_URL,
+                        params={
+                            "format": "geojson",
+                            "updatedafter": last_ingested.isoformat(),
+                            "eventtype": "earthquake",
+                            "limit": 20000
+                        },
+                        timeout=30
+                    )
+                    if cdc_resp.status_code == 200:
+                        cdc_geojson = cdc_resp.json()
+                        cdc_features = cdc_geojson.get("features", [])
+                        if cdc_features:
+                            merged_dict = {f["id"]: f for f in features}
+                            for f in cdc_features:
+                                merged_dict[f["id"]] = f
+                            features = list(merged_dict.values())
+                            geojson_data["features"] = features
+                            logger.info(f"[INGEST CDC] Recovered and merged {len(cdc_features)} events missed during downtime.")
+                    elif cdc_resp.status_code == 204:
+                        logger.info("[INGEST CDC] No events updated during downtime window (204 No Content).")
+        conn.close()
+    except Exception as cdc_err:
+        logger.warning(f"[INGEST CDC] Could not evaluate or run CDC downtime check: {cdc_err}")
+
     count = len(features)
-    logger.info(f"[INGEST] Received {count} seismic events from USGS feed.")
+    logger.info(f"[INGEST] Received/reconciled {count} seismic events from USGS.")
     
     # 2. Write raw JSON directly to MinIO Bronze (No landing layer)
     s3_key = f"bronze/year={now_utc.year}/month={now_utc.month:02d}/day={now_utc.day:02d}/feed_{int(now_utc.timestamp())}.json"

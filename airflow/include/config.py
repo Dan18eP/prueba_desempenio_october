@@ -13,6 +13,10 @@ USGS_HISTORICAL_QUERY_URL = os.getenv(
     "USGS_HISTORICAL_QUERY_URL",
     "https://earthquake.usgs.gov/fdsnws/event/1/query"
 )
+USGS_HISTORICAL_COUNT_URL = os.getenv(
+    "USGS_HISTORICAL_COUNT_URL",
+    "https://earthquake.usgs.gov/fdsnws/event/1/count"
+)
 
 # PostgreSQL Configuration
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")

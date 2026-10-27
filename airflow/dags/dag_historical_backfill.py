@@ -61,13 +61,20 @@ def execute_backfill(**context):
         "format": "geojson",
         "starttime": start_date,
         "endtime": end_date,
-        "minmagnitude": min_mag
+        "minmagnitude": min_mag,
+        "eventtype": "earthquake",
+        "limit": 20000,
+        "orderby": "time"
     }
     
     try:
         response = requests.get(USGS_HISTORICAL_QUERY_URL, params=query_params, timeout=60)
-        response.raise_for_status()
-        geojson_data = response.json()
+        if response.status_code == 204:
+            logger.info("[BACKFILL] USGS returned 204 No Content (0 earthquakes found in range).")
+            geojson_data = {"type": "FeatureCollection", "features": []}
+        else:
+            response.raise_for_status()
+            geojson_data = response.json()
     except Exception as e:
         logger.error(f"[BACKFILL] Network error querying USGS historical API: {e}")
         raise e

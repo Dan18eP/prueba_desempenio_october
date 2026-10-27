@@ -48,6 +48,20 @@ def test_viewer_access_to_backfill_returns_403(client: TestClient, viewer_token:
     response = client.post("/api/admin/backfill", json=payload, headers=headers)
     assert response.status_code == 403
 
+def test_admin_backfill_trigger_success(client: TestClient, admin_token: str):
+    """
+    Verifies that an admin can trigger historical backfill and receives status QUEUED
+    with parameters and estimated_events field.
+    """
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    payload = {"start_date": "2026-10-01", "end_date": "2026-10-27", "min_magnitude": 4.5}
+    response = client.post("/api/admin/backfill", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "QUEUED"
+    assert data["target_dag"] == "dag_historical_backfill"
+    assert "estimated_events" in data
+
 def test_viewer_access_to_regenerate_reports_returns_403(client: TestClient, viewer_token: str):
     """
     SECURITY & RBAC AUDIT REQUIREMENT:

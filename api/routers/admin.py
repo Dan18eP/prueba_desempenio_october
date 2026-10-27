@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
+import requests
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -63,7 +64,28 @@ def trigger_backfill(
     """
     Triggers historical USGS backfill pipeline (PDF Pág. 2).
     SECURITY: Admin only (403 for viewers).
+    Includes pre-flight check with USGS /count method.
     """
+    # Pre-flight count check via USGS /count method
+    estimated_events = None
+    try:
+        count_res = requests.get(
+            "https://earthquake.usgs.gov/fdsnws/event/1/count",
+            params={
+                "starttime": request.start_date,
+                "endtime": request.end_date,
+                "minmagnitude": request.min_magnitude,
+                "eventtype": "earthquake"
+            },
+            timeout=8
+        )
+        if count_res.status_code == 200 and count_res.text.strip().isdigit():
+            estimated_events = int(count_res.text.strip())
+        elif count_res.status_code == 204:
+            estimated_events = 0
+    except Exception:
+        estimated_events = None
+
     # Log backfill request into audit.pipeline_alerts or audit log
     try:
         db.execute(text("""
@@ -74,7 +96,7 @@ def trigger_backfill(
                 :msg, 'ADMIN_AUDIT', TRUE
             )
         """), {
-            "msg": f"Backfill solicitado por {current_user.username} para rango {request.start_date} a {request.end_date} (Min Mag: {request.min_magnitude})"
+            "msg": f"Backfill solicitado por {current_user.username} para rango {request.start_date} a {request.end_date} (Min Mag: {request.min_magnitude}, Est. Eventos: {estimated_events})"
         })
         db.commit()
     except Exception:
@@ -84,12 +106,13 @@ def trigger_backfill(
         "status": "QUEUED",
         "triggered_by": current_user.username,
         "target_dag": "dag_historical_backfill",
+        "estimated_events": estimated_events,
         "parameters": {
             "start_date": request.start_date,
             "end_date": request.end_date,
             "min_magnitude": request.min_magnitude
         },
-        "message": f"Backfill histórico encolado correctamente. Parámetros verificados para Airflow."
+        "message": f"Backfill histórico encolado correctamente. Estimación USGS: {estimated_events if estimated_events is not None else 'N/A'} eventos."
     }
 
 @router.post("/admin/reports/regenerate")
