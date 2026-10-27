@@ -41,8 +41,8 @@ export default function LineageView() {
       description: 'Ingesta directa e inmutable sin aterrizajes temporales. Fidelidad pura.'
     },
     {
-      id: 'pyspark_silver',
-      name: 'PySpark Refined Silver',
+      id: 'refined_silver',
+      name: 'Refined Silver Lakehouse',
       type: 'DELTA_PARQUET',
       layer: 'Silver',
       format: 'Parquet Snappy',

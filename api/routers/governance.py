@@ -32,12 +32,13 @@ def get_data_lineage():
             "description": "Ingesta directa sin pérdida. Almacenamiento inmutable."
         },
         {
-            "id": "pyspark_silver",
-            "name": "PySpark Refined Silver",
+            "id": "refined_silver",
+            "name": "Refined Silver Lakehouse",
             "type": "DELTA_LAKE_PARQUET",
             "layer": "Silver",
             "format": "Parquet Snappy",
             "path": "s3://sismowatch-lake/silver/earthquakes/",
+            "engine": "Pandas & Pandera (ADR 0010)",
             "description": "Deduplicación por updated DESC, tipado estricto, 7 reglas de calidad Pandera."
         },
         {

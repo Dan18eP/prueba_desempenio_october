@@ -24,6 +24,7 @@
 - [Martes]-[27/10/2026]-[09:00] : Formalización de ADR 0010 (Selección del motor de procesamiento Medallón con Python Nativo y Pandera tras benchmarking empírico), y renombrado canónico de DAG a dag_medallion_processing.py.
 - [Martes]-[27/10/2026]-[09:14] : Remediaciones quirúrgicas alineadas a la especificación oficial USGS FDSN: manejo de HTTP 204 No Content, pre-flight check con método /count en endpoint admin, recuperación automática CDC por updatedafter en downtime mayor a 60 min, actualización de ADR 0005 y nueva prueba unitaria pasando al 100% (23/23).
 - [Martes]-[27/10/2026]-[09:16] : Configuración de requerimientos adicionales de Python (_PIP_ADDITIONAL_REQUIREMENTS) en docker-compose.yml para Airflow y alineación de airflow/requirements.txt con Pandas y Pandera.
+- [Martes]-[27/10/2026]-[09:19] : Sincronización de nombres canónicos de DAG (dag_medallion_processing) y motor Pandas/Pandera en visores y endpoints de linaje de OpenMetadata/OpenLineage.
 
 
 

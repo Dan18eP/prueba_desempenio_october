@@ -68,10 +68,10 @@ LINEAGE_METADATA = {
     ],
     "upstreamEdges": [
         {"fromEntity": "src_usgs", "toEntity": "bronze_feed", "pipeline": "airflow.dag_usgs_ingest"},
-        {"fromEntity": "bronze_feed", "toEntity": "silver_earthquakes", "pipeline": "airflow.dag_pyspark_medallion"},
-        {"fromEntity": "silver_earthquakes", "toEntity": "gold_earthquakes", "pipeline": "airflow.dag_pyspark_medallion"},
-        {"fromEntity": "silver_earthquakes", "toEntity": "gold_kpis", "pipeline": "airflow.dag_pyspark_medallion"},
-        {"fromEntity": "silver_earthquakes", "toEntity": "gold_anomalies", "pipeline": "airflow.dag_pyspark_medallion"}
+        {"fromEntity": "bronze_feed", "toEntity": "silver_earthquakes", "pipeline": "airflow.dag_medallion_processing"},
+        {"fromEntity": "silver_earthquakes", "toEntity": "gold_earthquakes", "pipeline": "airflow.dag_medallion_processing"},
+        {"fromEntity": "silver_earthquakes", "toEntity": "gold_kpis", "pipeline": "airflow.dag_medallion_processing"},
+        {"fromEntity": "silver_earthquakes", "toEntity": "gold_anomalies", "pipeline": "airflow.dag_medallion_processing"}
     ],
     "reconciliation": {
         "rule": "Me llegaron 20, mostré 20",
