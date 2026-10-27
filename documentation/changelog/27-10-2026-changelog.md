@@ -9,6 +9,8 @@
 - [Martes]-[27/10/2026]-[07:00] : Creación de docs/requirements_compliance.md documentando los 7 requerimientos críticos del PDF y plan de acción de auditoría.
 - [Martes]-[27/10/2026]-[07:02] : Creación y formalización de la especificación de diseño visual y de experiencia de usuario en docs/design.md y design.md.
 - [Martes]-[27/10/2026]-[07:07] : Formalización de ADR 0007 sobre formatos de almacenamiento y Serving Layer, y depuración de documentos duplicados en el repositorio.
+- [Martes]-[27/10/2026]-[07:12] : Formalización de ADR 0008: Selección de Qwen 2.5 Coder (3B/1.5B) para Text-to-SQL, generación declarativa de gráficos y protocolo Zero-Crash.
+
 
 
 
