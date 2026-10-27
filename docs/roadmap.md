@@ -38,28 +38,28 @@ Este documento sirve como el tablero de control de avance técnico para garantiz
 ---
 
 ### Fase 2: Ingesta & Procesamiento Medallón (Airflow + PySpark)
-- [ ] Crear `airflow/include/config.py` con parámetros de conexión hacia MinIO y PostgreSQL.
-- [ ] Crear `airflow/include/callbacks.py` con `on_failure_callback` estructurado.
-- [ ] Crear `airflow/include/quality.py` con validaciones de calidad (Pandera / PySpark):
-  - [ ] Reglas de rango (latitud, longitud, profundidad, magnitud).
-  - [ ] Control de frescura ($\le 120\text{ min}$) y volumen ($0 < N \le 500$).
-  - [ ] Tagging de auditoría (`quality_flag: FLAGGED`) sin pérdida de datos.
-- [ ] Crear `airflow/include/openmetadata_lineage.py` con emisión de esquemas y eventos OpenLineage.
-- [ ] Crear `airflow/dags/dag_usgs_ingest.py`:
-  - [ ] Periodicidad cada 5 min (`*/5 * * * *`).
-  - [ ] Try-catch en cada tarea, reintentos exponenciales y timeout.
-  - [ ] Ingesta a MinIO Bronze (`s3://sismowatch-lake/bronze/`).
-  - [ ] Disparo automático de transformación vía `TriggerDagRunOperator`.
-- [ ] Crear `airflow/dags/dag_pyspark_medallion.py`:
-  - [ ] PySpark local (`local[*]`), sin clúster ocioso.
-  - [ ] Bronze JSON $\to$ Silver Parquet Snappy (`s3://sismowatch-lake/silver/earthquakes/`).
-  - [ ] Deduplicación por ventana temporal de última revisión (`updated DESC`).
-  - [ ] Silver $\to$ Gold Parquet Snappy (`s3://sismowatch-lake/gold/`).
-  - [ ] Sincronización idempotente a PostgreSQL Curated (`INSERT ... ON CONFLICT (id) DO UPDATE`).
-  - [ ] Conciliación de balance 20/20 en `audit.batch_reconciliation`.
-- [ ] Crear `airflow/dags/dag_historical_backfill.py`:
-  - [ ] Parámetros interactivos en Airflow UI (`start_date`, `end_date`, `min_magnitude`).
-  - [ ] Consulta histórica al endpoint de USGS sin duplicar registros existentes.
+- [x] Crear `airflow/include/config.py` con parámetros de conexión hacia MinIO y PostgreSQL.
+- [x] Crear `airflow/include/callbacks.py` con `on_failure_callback` estructurado.
+- [x] Crear `airflow/include/quality.py` con validaciones de calidad (Pandera / PySpark):
+  - [x] Reglas de rango (latitud, longitud, profundidad, magnitud).
+  - [x] Control de frescura ($\le 120\text{ min}$) y volumen ($0 < N \le 500$).
+  - [x] Tagging de auditoría (`quality_flag: FLAGGED`) sin pérdida de datos.
+- [x] Crear `airflow/include/openmetadata_lineage.py` con emisión de esquemas y eventos OpenLineage.
+- [x] Crear `airflow/dags/dag_usgs_ingest.py`:
+  - [x] Periodicidad cada 5 min (`*/5 * * * *`).
+  - [x] Try-catch en cada tarea, reintentos exponenciales y timeout.
+  - [x] Ingesta a MinIO Bronze (`s3://sismowatch-lake/bronze/`).
+  - [x] Disparo automático de transformación vía `TriggerDagRunOperator`.
+- [x] Crear `airflow/dags/dag_pyspark_medallion.py`:
+  - [x] PySpark local (`local[*]`), sin clúster ocioso.
+  - [x] Bronze JSON $\to$ Silver Parquet Snappy (`s3://sismowatch-lake/silver/earthquakes/`).
+  - [x] Deduplicación por ventana temporal de última revisión (`updated DESC`).
+  - [x] Silver $\to$ Gold Parquet Snappy (`s3://sismowatch-lake/gold/`).
+  - [x] Sincronización idempotente a PostgreSQL Curated (`INSERT ... ON CONFLICT (id) DO UPDATE`).
+  - [x] Conciliación de balance 20/20 en `audit.batch_reconciliation`.
+- [x] Crear `airflow/dags/dag_historical_backfill.py`:
+  - [x] Parámetros interactivos en Airflow UI (`start_date`, `end_date`, `min_magnitude`).
+  - [x] Consulta histórica al endpoint de USGS sin duplicar registros existentes.
 
 ---
 
