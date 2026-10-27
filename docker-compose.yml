@@ -118,6 +118,7 @@ services:
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET_KEY}
+      _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-boto3 psycopg2-binary requests pandas pyarrow pandera pydantic openlineage-airflow}
     ports:
       - "8080:8080"
     volumes:
@@ -146,6 +147,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-boto3 psycopg2-binary requests pandas pyarrow pandera pydantic openlineage-airflow}
       # S3 / MinIO Configuration for PySpark tasks
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-sismowatch_admin}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-sismowatch_secret_minio_2026}

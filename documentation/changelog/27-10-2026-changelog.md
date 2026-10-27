@@ -23,6 +23,7 @@
 - [Martes]-[27/10/2026]-[08:16] : Culminación de Fase 6 (Suite de 22 pruebas automatizadas con pytest al 100% passed, escaneo estático Bandit con 0 vulnerabilidades altas, pip-audit, README.md maestro y tech-doc-f6.md).
 - [Martes]-[27/10/2026]-[09:00] : Formalización de ADR 0010 (Selección del motor de procesamiento Medallón con Python Nativo y Pandera tras benchmarking empírico), y renombrado canónico de DAG a dag_medallion_processing.py.
 - [Martes]-[27/10/2026]-[09:14] : Remediaciones quirúrgicas alineadas a la especificación oficial USGS FDSN: manejo de HTTP 204 No Content, pre-flight check con método /count en endpoint admin, recuperación automática CDC por updatedafter en downtime mayor a 60 min, actualización de ADR 0005 y nueva prueba unitaria pasando al 100% (23/23).
+- [Martes]-[27/10/2026]-[09:16] : Configuración de requerimientos adicionales de Python (_PIP_ADDITIONAL_REQUIREMENTS) en docker-compose.yml para Airflow y alineación de airflow/requirements.txt con Pandas y Pandera.
 
 
 
