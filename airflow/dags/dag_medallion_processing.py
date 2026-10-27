@@ -177,6 +177,7 @@ def transform_bronze_to_silver(**context):
     context["ti"].xcom_push(key="batch_id", value=batch_id)
     context["ti"].xcom_push(key="raw_count", value=raw_count)
     context["ti"].xcom_push(key="silver_count", value=len(enriched_records))
+    context["ti"].xcom_push(key="batch_ids", value=[r["id"] for r in enriched_records])
     return batch_id
 
 def transform_silver_to_gold(**context):
@@ -188,25 +189,57 @@ def transform_silver_to_gold(**context):
     batch_id = dag_run.conf.get("batch_id") if dag_run and dag_run.conf else f"batch_{int(datetime.now(timezone.utc).timestamp())}"
     raw_count = context["ti"].xcom_pull(task_ids="transform_bronze_to_silver", key="raw_count") or 0
     silver_count = context["ti"].xcom_pull(task_ids="transform_bronze_to_silver", key="silver_count") or 0
+    batch_ids = context["ti"].xcom_pull(task_ids="transform_bronze_to_silver", key="batch_ids") or []
 
-    logger.info(f"[MEDALLION-GOLD] Starting Silver -> Gold transformation for {batch_id}")
+    logger.info(f"[MEDALLION-GOLD] Starting Silver -> Gold transformation for {batch_id} (Batch size: {len(batch_ids)})")
 
-    # 1. Fetch Silver records
+    # 1. Fetch Silver records scoped strictly to this batch
     conn = get_db_connection(role="transform")
     try:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, magnitude, place, event_time_utc, updated_time_utc,
-                       longitude, latitude, depth_km, tsunami_alert, significance,
-                       review_status, quality_status
-                FROM staging.earthquakes_refined
-                ORDER BY event_time_utc DESC
-                LIMIT 500;
-            """)
+            if batch_ids:
+                cur.execute("""
+                    SELECT id, magnitude, place, event_time_utc, updated_time_utc,
+                           longitude, latitude, depth_km, tsunami_alert, significance,
+                           review_status, quality_status
+                    FROM staging.earthquakes_refined
+                    WHERE id = ANY(%s)
+                    ORDER BY event_time_utc DESC;
+                """, (batch_ids,))
+            else:
+                cur.execute("""
+                    SELECT id, magnitude, place, event_time_utc, updated_time_utc,
+                           longitude, latitude, depth_km, tsunami_alert, significance,
+                           review_status, quality_status
+                    FROM staging.earthquakes_refined
+                    ORDER BY event_time_utc DESC
+                    LIMIT 500;
+                """)
             silver_records = cur.fetchall()
             
         # 2. Detección de Anomalías Estadísticas (Z-Score y Enjambres)
         gold_records, detected_anomalies = detect_seismic_anomalies([dict(r) for r in silver_records])
+
+        # 2.1 Persistencia de Capa Gold Parquet en MinIO Data Lakehouse
+        try:
+            import io
+            import pandas as pd
+            gold_df = pd.DataFrame(gold_records)
+            if not gold_df.empty:
+                now_dt = datetime.now(timezone.utc)
+                gold_parquet_key = f"gold/year={now_dt.year}/month={now_dt.month:02d}/day={now_dt.day:02d}/gold_{batch_id}.parquet"
+                buffer = io.BytesIO()
+                gold_df.to_parquet(buffer, index=False, engine="pyarrow", compression="snappy")
+                s3_client = get_s3_client()
+                s3_client.put_object(
+                    Bucket=MINIO_BUCKET,
+                    Key=gold_parquet_key,
+                    Body=buffer.getvalue(),
+                    ContentType="application/octet-stream"
+                )
+                logger.info(f"[MEDALLION-GOLD] Successfully saved Gold Parquet to s3://{MINIO_BUCKET}/{gold_parquet_key}")
+        except Exception as s3_err:
+            logger.warning(f"[MEDALLION-GOLD] Could not write Gold Parquet to MinIO: {s3_err}")
 
         # 3. Sincronización Idempotente a PostgreSQL curated.gold_earthquakes
         with conn.cursor() as cur:
@@ -304,7 +337,11 @@ def transform_silver_to_gold(**context):
         emit_openlineage_event(
             job_name="dag_medallion_processing",
             inputs=["minio_sismowatch_lake.silver.earthquakes"],
-            outputs=["postgres_sismowatch.curated.gold_earthquakes", "postgres_sismowatch.curated.gold_hourly_kpis"],
+            outputs=[
+                "minio_sismowatch_lake.gold.earthquakes",
+                "postgres_sismowatch.curated.gold_earthquakes",
+                "postgres_sismowatch.curated.gold_hourly_kpis"
+            ],
             row_count=len(gold_records)
         )
 

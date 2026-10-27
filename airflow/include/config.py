@@ -7,7 +7,7 @@ from botocore.client import Config
 # USGS Endpoints
 USGS_REALTIME_FEED_URL = os.getenv(
     "USGS_REALTIME_FEED_URL",
-    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson"
+    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 )
 USGS_HISTORICAL_QUERY_URL = os.getenv(
     "USGS_HISTORICAL_QUERY_URL",

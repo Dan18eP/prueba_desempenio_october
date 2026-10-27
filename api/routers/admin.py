@@ -15,18 +15,19 @@ class BackfillRequest(BaseModel):
     end_date: str
     min_magnitude: float = 4.0
 
-@router.get("/quality/quarantine")
-def get_quarantine_records(
+@router.get("/quality/audit-flags", tags=["Admin Quality Governance"])
+@router.get("/quality/quarantine", include_in_schema=False)
+def get_quality_audit_flags(
     limit: int = Query(50, ge=1, le=200),
     current_user: TokenData = Depends(require_admin),
     db: Session = Depends(get_admin_db)
 ):
     """
-    Administrative Quarantine Audit View (PDF Pág. 3 y 7).
+    Administrative Data Quality Audit View (ISO/IEC 25012 compliance).
+    Audits records with quality warnings without segregating or losing data (Linaje Puro).
     SECURITY REQUIREMENT:
-      - Admin: Receives full list of quarantined/flagged records for audit.
+      - Admin: Receives list of flagged records for quality audit.
       - Viewer: STRICT 403 FORBIDDEN.
-    Non-destructive quarantine: records remain tagged but visible to auditors.
     """
     query = text("""
         SELECT 
@@ -51,8 +52,9 @@ def get_quarantine_records(
         "status": "SUCCESS",
         "audited_by": current_user.username,
         "total_flagged": len(rows),
+        "flagged_records": [dict(r) for r in rows],
         "quarantined_records": [dict(r) for r in rows],
-        "message": "Registros en cuarentena no destructiva auditados exitosamente."
+        "message": "Auditoría de advertencias de calidad completada exitosamente conforme a ISO/IEC 25012."
     }
 
 @router.post("/admin/backfill")

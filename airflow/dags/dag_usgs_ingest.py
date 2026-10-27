@@ -138,7 +138,7 @@ def fetch_and_store_bronze(**context):
     # 4. Emit OpenLineage Event
     emit_openlineage_event(
         job_name="dag_usgs_ingest",
-        inputs=["https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson"],
+        inputs=[USGS_REALTIME_FEED_URL],
         outputs=[f"minio://{MINIO_BUCKET}/{s3_key}"],
         row_count=count
     )

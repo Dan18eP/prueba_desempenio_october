@@ -119,6 +119,7 @@ services:
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__WEBSERVER__SECRET_KEY: ${JWT_SECRET_KEY}
+      AIRFLOW__WEBSERVER__WORKERS: "2"
       _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-boto3 psycopg2-binary requests pandas pyarrow pandera pydantic openlineage-airflow}
     ports:
       - "8080:8080"
@@ -130,7 +131,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768M
+          memory: 1280M
     networks:
       - sismowatch-net
 
@@ -232,6 +233,7 @@ services:
     environment:
       VITE_API_URL: http://localhost:8000
       VITE_OPENMETADATA_URL: http://localhost:8585
+      VITE_CARTO_API_KEY: ${VITE_CARTO_API_KEY:-cb1_4vzx_1_c2e8d37b1e85e3709ad52c32}
     deploy:
       resources:
         limits:

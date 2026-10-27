@@ -46,7 +46,7 @@ export default function LineageView() {
       type: 'DELTA_PARQUET',
       layer: 'Silver',
       format: 'Parquet Snappy',
-      description: 'Deduplicación por updated DESC, 7 reglas de calidad Pandera, cuarentena no destructiva.'
+      description: 'Deduplicación por updated DESC, 7 reglas de calidad Pandera y linaje puro sin pérdida.'
     },
     {
       id: 'postgres_gold',

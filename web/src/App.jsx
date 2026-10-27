@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import TsunamiBanner from './components/TsunamiBanner';
 import KpiBar from './components/KpiBar';
-import LoginModal from './components/LoginModal';
+import LoginView from './views/LoginView';
 import ControlCenterView from './views/ControlCenterView';
 import LineageView from './views/LineageView';
 import AiAgentView from './views/AiAgentView';
@@ -12,10 +12,7 @@ import { RefreshCw, X, Check, AlertCircle } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('control');
-  const [currentUser, setCurrentUser] = useState(() => {
-    return api.user || { username: 'admin', role: 'admin', email: 'admin@sismowatch.gov.co' };
-  });
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => api.user);
   const [isBackfillModalOpen, setIsBackfillModalOpen] = useState(false);
 
   // Operational Data State
@@ -38,20 +35,13 @@ export default function App() {
   // Initial Data Fetch
   useEffect(() => {
     async function fetchInitialData() {
+      if (!api.token || !currentUser) return;
       try {
-        if (!api.token) {
-          try {
-            const authRes = await api.login('admin', 'SismoAdmin2026!Secret');
-            setCurrentUser(authRes.user);
-          } catch (e) {
-            console.warn('Auto-authentication notice:', e);
-          }
-        }
         const [kpiRes, tsRes, sevRes, evRes] = await Promise.all([
           api.getKpis().catch(() => null),
           api.getTimeseries().catch(() => null),
           api.getSeverity().catch(() => null),
-          api.getEvents({ limit: 40 }).catch(() => null)
+          api.getEvents({ limit: 100 }).catch(() => null)
         ]);
 
         if (kpiRes) setKpis(kpiRes);
@@ -69,7 +59,7 @@ export default function App() {
     }
 
     fetchInitialData();
-  }, []);
+  }, [currentUser]);
 
   // Real-Time Server-Sent Events (SSE) Stream
   useEffect(() => {
@@ -150,6 +140,11 @@ export default function App() {
     }
   };
 
+  // If no user or token is authenticated, present full-screen Login View
+  if (!currentUser || !api.token) {
+    return <LoginView onLoginSuccess={(user) => setCurrentUser(user)} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0e16] text-[#e2e8f0]">
       {/* Tactical Dark Mode Header */}
@@ -157,7 +152,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         currentUser={currentUser}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onOpenLogin={() => handleLogout()}
         onLogout={handleLogout}
         onOpenBackfill={() => setIsBackfillModalOpen(true)}
         isLive={isLive}
@@ -190,10 +185,7 @@ export default function App() {
         {activeTab === 'agent' && <AiAgentView currentUser={currentUser} />}
 
         {activeTab === 'governance' && (
-          <GovernanceView
-            currentUser={currentUser}
-            onOpenLogin={() => setIsLoginModalOpen(true)}
-          />
+          <GovernanceView currentUser={currentUser} />
         )}
       </main>
 
@@ -203,7 +195,7 @@ export default function App() {
           <span>TELEMETRÍA GROUND TRUTH: </span>
           <strong className="text-emerald-400 font-bold">20 Ingeridos / 20 Publicados (Fidelidad 100%)</strong>
           <span className="mx-2 text-gray-600">|</span>
-          <span className="text-indigo-400">Cero Pérdida Destructiva (Cuarentena No Destructiva)</span>
+          <span className="text-indigo-400">Cero Pérdida de Datos (Linaje Puro)</span>
           <span className="mx-2 text-gray-600">|</span>
           <span className="text-gray-300">OpenLineage & Pandera ISO 25012</span>
         </div>
@@ -213,16 +205,9 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Authentication Modal */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        onLoginSuccess={(user) => setCurrentUser(user)}
-      />
-
       {/* Admin Backfill Modal */}
       {isBackfillModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-[#141822] border border-[#262a33] p-6 shadow-2xl relative">
             <button
               onClick={() => setIsBackfillModalOpen(false)}

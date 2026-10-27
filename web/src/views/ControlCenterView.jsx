@@ -49,7 +49,7 @@ export default function ControlCenterView({
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Tactical dark map tiles (Esri World Dark Gray Canvas - 100% Free, Zero Watermark, No API Key)
+    // Tactical dark map tiles (CARTO Basemaps Dark Matter with user API Key)
     const map = L.map(mapContainerRef.current, {
       center: [15.0, -90.0],
       zoom: 3,
@@ -58,14 +58,11 @@ export default function ControlCenterView({
       attributionControl: false
     });
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 16,
-      subdomains: ['server', 'services']
-    }).addTo(map);
-
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 16,
-      opacity: 0.75
+    const cartoKey = import.meta.env.VITE_CARTO_API_KEY || 'cb1_4vzx_1_c2e8d37b1e85e3709ad52c32';
+    L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`, {
+      maxZoom: 19,
+      subdomains: 'abcd',
+      attribution: '© CARTO, © OpenStreetMap'
     }).addTo(map);
 
     markersLayerRef.current = L.layerGroup().addTo(map);
@@ -244,7 +241,7 @@ export default function ControlCenterView({
 
           <div
             ref={mapContainerRef}
-            className="w-full h-[380px] rounded-xl overflow-hidden border border-[#262a33] bg-[#0a0e16]"
+            className="w-full h-[380px] rounded-xl overflow-hidden border border-[#262a33] bg-[#0a0e16] relative isolate z-0"
           />
         </div>
 

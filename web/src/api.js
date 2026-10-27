@@ -137,14 +137,14 @@ class ApiService {
     return res.json();
   }
 
-  async getQuarantine() {
-    const res = await fetch(`${API_BASE_URL}/api/quality/quarantine`, {
+  async getQualityAuditFlags() {
+    const res = await fetch(`${API_BASE_URL}/api/quality/audit-flags`, {
       headers: this.getHeaders()
     });
     if (res.status === 403) {
-      throw new Error('ACCESO_DENEGADO: Solo usuarios con rol Administrador pueden auditar la cuarentena.');
+      throw new Error('ACCESO_DENEGADO: Solo usuarios con rol Administrador pueden auditar advertencias de calidad.');
     }
-    if (!res.ok) throw new Error('Error al consultar cuarentena');
+    if (!res.ok) throw new Error('Error al consultar auditoría de calidad');
     return res.json();
   }
 

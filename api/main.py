@@ -59,7 +59,7 @@ app = FastAPI(
     ### Características Clave:
     - **Seguridad RBAC:** Roles `viewer` y `admin` con autenticación JWT (HS256).
     - **Tiempo Real:** Server-Sent Events (SSE) en `/api/stream` con reconexión automática.
-    - **Gobernanza:** Trazabilidad OpenMetadata pura (20 in -> 20 out) y auditoría de cuarentena no destructiva.
+    - **Gobernanza:** Trazabilidad OpenMetadata pura (20 in -> 20 out) y auditoría de calidad de datos ISO/IEC 25012.
     - **Agente IA Dual:** Motor Text-to-SQL local (`qwen2.5-coder:3b`) y Gemini con protocolo de gráficos declarativos Chart.js.
     """,
     version="2.4.0",
