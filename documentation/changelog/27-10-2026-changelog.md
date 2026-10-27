@@ -7,6 +7,8 @@
 - [Martes]-[27/10/2026]-[06:53] : Definición de reglas de cero mocks y orquestación pura en rules.md, y auditoría forense completa del PDF del enunciado.
 - [Martes]-[27/10/2026]-[06:55] : Formalización de arquitectura de autenticación JWT y control de acceso por roles (RBAC) en ADR 0006.
 - [Martes]-[27/10/2026]-[07:00] : Creación de docs/requirements_compliance.md documentando los 7 requerimientos críticos del PDF y plan de acción de auditoría.
+- [Martes]-[27/10/2026]-[07:02] : Creación y formalización de la especificación de diseño visual y de experiencia de usuario en docs/design.md y design.md.
+
 
 
 
