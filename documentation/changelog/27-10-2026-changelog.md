@@ -11,6 +11,8 @@
 - [Martes]-[27/10/2026]-[07:07] : Formalización de ADR 0007 sobre formatos de almacenamiento y Serving Layer, y depuración de documentos duplicados en el repositorio.
 - [Martes]-[27/10/2026]-[07:14] : Formalización de ADR 0008 sobre el protocolo de gráficos declarativos y arquitectura anti-fallos en 3 capas para el agente conversacional.
 - [Martes]-[27/10/2026]-[07:18] : Formalización de ADR 0009 sobre el Motor Dual de IA (Qwen 2.5-Coder / Gemini) y cumplimiento de controles de seguridad OWASP.
+- [Martes]-[27/10/2026]-[07:22] : Reescritura histórica de autoría de commits a Daniel Echeverria y vinculación del repositorio remoto de GitHub.
+
 
 
 
