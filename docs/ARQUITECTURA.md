@@ -27,34 +27,39 @@ flowchart TD
         OM["OpenMetadata / OpenLineage (Linaje Puro & Gobernanza)"]
     end
 
-    subgraph Procesamiento ["3. Capa de Cómputo"]
-        SPARK["Apache Spark / PySpark Engine (Limpieza, Tipado, Agregaciones)"]
-        ML["Módulo ML (Z-Score / Isolation Forest para Anomalías)"]
+    subgraph DataLakehouse ["3. Almacenamiento Lakehouse MinIO (S3)"]
+        BRONZE["s3://lakehouse/bronze/ (JSON crudo inmutable particionado por fecha)"]
+        SILVER["s3://lakehouse/silver/ (Parquet limpio, tipado, deduplicado por ID)"]
+        GOLD_S3["s3://lakehouse/gold/ (Parquet analítico con KPIs y anomalías)"]
     end
 
-    subgraph Almacenamiento ["4. Almacenamiento PostgreSQL (Medallion)"]
-        BRONZE["raw (Bronze: Carga cruda idempotente con auditoría)"]
-        SILVER["staging (Silver: Limpio, tipado, coordenadas validadas)"]
-        GOLD["curated (Gold: Métricas, KPIs, anomalías, listo para consumo)"]
-        QUAL["quality_metrics / audit (Trazabilidad 100%, 20 in -> 20 out)"]
+    subgraph Procesamiento ["4. Capa de Cómputo"]
+        SPARK["Apache Spark / PySpark Engine (Limpieza, Tipado, Parquet, ML)"]
+        ML["Módulo ML (Z-Score para detección de enjambres sísmicos)"]
     end
 
-    subgraph Consumo ["5. Capa de Servicio y Plataforma"]
+    subgraph Servicio ["5. Almacenamiento Servible PostgreSQL"]
+        GOLD_PG["curated (Gold: gold_earthquakes, kpis, anomalies, ai_reports)"]
+        AUDIT_PG["audit (quality_metrics: balance 20 in -> 20 out, quarantine view)"]
+    end
+
+    subgraph Consumo ["6. Capa de Servicio y Plataforma"]
         API["FastAPI Backend (JWT, RBAC Viewer/Admin, SSE / WebSockets)"]
-        DASH["Frontend Web (Dashboard React/Streamlit + Mapa Leaflet)"]
-        AI_AGENT["Agente Conversacional Local (Ollama + Text-to-SQL + Fallback)"]
+        DASH["Frontend Web (Dashboard React/Streamlit + Mapa Leaflet + Linaje)"]
+        AI_AGENT["Agente Conversacional Local (Ollama Qwen2.5:1.5B + Fallback)"]
     end
 
     USGS -->|HTTP Fetch Idempotente| AF
-    AF -->|Carga Cruda| BRONZE
-    AF -->|Job PySpark| SPARK
+    AF -->|JSON crudo| BRONZE
     BRONZE -->|Lectura PySpark| SPARK
-    SPARK -->|Validaciones Pandera/GE| SILVER
+    SPARK -->|Limpieza & Pandera| SILVER
     SILVER -->|Enriquecimiento & ML| ML
-    ML -->|Publicación Curated| GOLD
+    ML -->|Publicación| GOLD_S3
+    GOLD_S3 -->|Sincronización Idempotente| GOLD_PG
+    SPARK -->|Registro de Trazabilidad| AUDIT_PG
     AF -.->|Registro de Linaje y Metadatos| OM
-    GOLD -->|Consultas Solo Lectura| API
-    GOLD -->|Text-to-SQL Seguro| AI_AGENT
+    GOLD_PG -->|Consultas Solo Lectura| API
+    GOLD_PG -->|Text-to-SQL Seguro| AI_AGENT
     API -->|SSE / REST| DASH
     AI_AGENT -->|Chat Interface| DASH
 ```
