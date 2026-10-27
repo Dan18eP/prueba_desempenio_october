@@ -47,44 +47,57 @@ class ApiService {
   }
 
   async getKpis() {
-    const res = await fetch(`${API_BASE_URL}/api/kpis`);
+    const res = await fetch(`${API_BASE_URL}/api/kpis`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener KPIs');
     return res.json();
   }
 
   async getTimeseries() {
-    const res = await fetch(`${API_BASE_URL}/api/stats/timeseries`);
+    const res = await fetch(`${API_BASE_URL}/api/stats/timeseries`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener series temporales');
     return res.json();
   }
 
   async getSeverity() {
-    const res = await fetch(`${API_BASE_URL}/api/stats/severity`);
+    const res = await fetch(`${API_BASE_URL}/api/stats/severity`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener severidad');
     return res.json();
   }
 
   async getEvents(params = {}) {
     const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE_URL}/api/events?${query}`);
+    const res = await fetch(`${API_BASE_URL}/api/events?${query}`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener eventos');
     return res.json();
   }
 
   async getLatestReport() {
-    const res = await fetch(`${API_BASE_URL}/api/reports/latest`);
+    const res = await fetch(`${API_BASE_URL}/api/reports/latest`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener reporte ejecutivo');
     return res.json();
   }
 
   async getReportHistory() {
-    const res = await fetch(`${API_BASE_URL}/api/reports/history`);
+    const res = await fetch(`${API_BASE_URL}/api/reports/history`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener historial de reportes');
     return res.json();
   }
 
   getExportUrl(format = 'csv') {
-    return `${API_BASE_URL}/api/reports/export?format=${format}`;
+    const tokenParam = this.token ? `&token=${encodeURIComponent(this.token)}` : '';
+    return `${API_BASE_URL}/api/reports/export?format=${format}${tokenParam}`;
   }
 
   async askChat(prompt) {
@@ -101,19 +114,25 @@ class ApiService {
   }
 
   async getLineage() {
-    const res = await fetch(`${API_BASE_URL}/api/governance/lineage`);
+    const res = await fetch(`${API_BASE_URL}/api/governance/lineage`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener linaje');
     return res.json();
   }
 
   async getQualityRules() {
-    const res = await fetch(`${API_BASE_URL}/api/governance/quality-rules`);
+    const res = await fetch(`${API_BASE_URL}/api/governance/quality-rules`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener reglas de calidad');
     return res.json();
   }
 
   async getPipelineStatus() {
-    const res = await fetch(`${API_BASE_URL}/api/governance/status`);
+    const res = await fetch(`${API_BASE_URL}/api/governance/status`, {
+      headers: this.getHeaders()
+    });
     if (!res.ok) throw new Error('Error al obtener estado de pipelines');
     return res.json();
   }

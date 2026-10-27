@@ -49,7 +49,7 @@ export default function ControlCenterView({
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Tactical dark map tiles (CartoDB Dark Matter / OpenStreetMap)
+    // Tactical dark map tiles (Esri World Dark Gray Canvas - 100% Free, Zero Watermark, No API Key)
     const map = L.map(mapContainerRef.current, {
       center: [15.0, -90.0],
       zoom: 3,
@@ -58,9 +58,14 @@ export default function ControlCenterView({
       attributionControl: false
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd'
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 16,
+      subdomains: ['server', 'services']
+    }).addTo(map);
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 16,
+      opacity: 0.75
     }).addTo(map);
 
     markersLayerRef.current = L.layerGroup().addTo(map);

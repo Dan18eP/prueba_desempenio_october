@@ -7,6 +7,7 @@ import requests
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from api.core.config import settings
+from api.core.database import engine_admin
 from api.services.security_guard import sanitize_text_for_llm, validate_sql_query
 from api.services.chart_protocol import build_declarative_chart
 from api.services.circuit_breaker import execute_fallback_intent
@@ -38,7 +39,8 @@ Tablas disponibles en esquema curated (PostgreSQL):
 )
 """
 
-SYSTEM_PROMPT = f"""  # nosec B608
+# nosec B608
+SYSTEM_PROMPT = f"""
 Eres SismoWatch AI, asistente de inteligencia sismológica y Text-to-SQL.
 Tu tarea es convertir la pregunta del usuario en una consulta SQL de solo lectura (SELECT) sobre las tablas del esquema curated.
 
@@ -100,7 +102,7 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
                 "stream": False,
                 "format": "json"
             }
-            res = requests.post(ollama_url, json=payload, timeout=6)
+            res = requests.post(ollama_url, json=payload, timeout=30)
             res.raise_for_status()
             res_data = res.json()
             raw_response = res_data.get("response", "")
@@ -173,25 +175,26 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
         )
         return execute_fallback_intent(clean_prompt, db, latency_ms=latency_ms)
 
-def record_ai_execution(task_name: str, prompt_version: str, model_name: str, prompt_tokens: int, completion_tokens: int, latency_ms: int, status: str, db: Session):
-    """Logs LLM interaction metrics into audit.ai_executions (PDF Pág. 5)."""
+def record_ai_execution(task_name: str, prompt_version: str, model_name: str, prompt_tokens: int, completion_tokens: int, latency_ms: int, status: str, db: Session = None):
+    """Logs LLM interaction metrics into audit.ai_executions (PDF Pág. 5) using admin connection."""
     try:
-        db.execute(text("""
-            INSERT INTO audit.ai_executions (
-                task_name, prompt_version, model_name,
-                prompt_tokens, completion_tokens, latency_ms,
-                estimated_cost_usd, status
-            ) VALUES (:task, :ver, :model, :p_tok, :c_tok, :lat, 0.0, :stat)
-        """), {
-            "task": task_name,
-            "ver": prompt_version,
-            "model": model_name,
-            "p_tok": prompt_tokens,
-            "c_tok": completion_tokens,
-            "lat": latency_ms,
-            "stat": status
-        })
-        db.commit()
+        with engine_admin.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO audit.ai_executions (
+                    task_name, prompt_version, model_name,
+                    prompt_tokens, completion_tokens, latency_ms,
+                    estimated_cost_usd, status
+                ) VALUES (:task, :ver, :model, :p_tok, :c_tok, :lat, 0.0, :stat)
+            """), {
+                "task": task_name,
+                "ver": prompt_version,
+                "model": model_name,
+                "p_tok": prompt_tokens,
+                "c_tok": completion_tokens,
+                "lat": latency_ms,
+                "stat": status
+            })
+            conn.commit()
     except Exception as e:
         logger.error(f"[LLM_DUAL] Error writing AI execution log: {e}")
         db.rollback()

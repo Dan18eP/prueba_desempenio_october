@@ -47,7 +47,8 @@ def list_events(
     count_query = text(f"SELECT COUNT(*) FROM curated.gold_earthquakes WHERE {where_clause}")  # nosec B608
     total_count = db.execute(count_query, params).scalar() or 0
 
-    data_query = text(f"""  # nosec B608
+    # nosec B608
+    data_query = text(f"""
         SELECT 
             id,
             magnitude,

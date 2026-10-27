@@ -26,6 +26,7 @@
 - [Martes]-[27/10/2026]-[09:16] : Configuración de requerimientos adicionales de Python (_PIP_ADDITIONAL_REQUIREMENTS) en docker-compose.yml para Airflow y alineación de airflow/requirements.txt con Pandas y Pandera.
 - [Martes]-[27/10/2026]-[09:19] : Sincronización de nombres canónicos de DAG (dag_medallion_processing) y motor Pandas/Pandera en visores y endpoints de linaje de OpenMetadata/OpenLineage.
 - [Martes]-[27/10/2026]-[09:46] : Despliegue integral con Docker Compose (7 contenedores activos y saludables): MinIO Silo S3, PostgreSQL con schemas raw/staging/curated, OpenMetadata en :8585, React Web en :3000, Airflow en :8080 y FastAPI en :8000. Ingesta live de USGS ejecutada y persistencia de Silver Parquet en MinIO y Gold en PostgreSQL validada con 100% fidelidad (0 pérdidas).
+- [Martes]-[27/10/2026]-[10:05] : Corrección integral de front-end y back-end: resolución de sintaxis SQL en /api/events eliminando comentario # nosec dentro de query, inyección de tokens JWT en headers de api.js, auto-login en App.jsx para sesión inmediata, sustitución de CartoDB por Esri World Dark Gray Canvas (100% gratis, sin marca de agua ni token requerido), favicon SVG embebido, incremento de timeout en cliente Ollama (30s) permitiendo inferencia local Text-to-SQL pura con Qwen 2.5 Coder sobre curated.gold_earthquakes con fallback_active=false, y actualización de entrega final zip.
 
 
 

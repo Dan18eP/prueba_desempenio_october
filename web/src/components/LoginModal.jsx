@@ -4,7 +4,7 @@ import { api } from '../api';
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('AdminSismo2026!');
+  const [password, setPassword] = useState('SismoAdmin2026!Secret');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -114,7 +114,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => handleQuickLogin('admin', 'AdminSismo2026!')}
+              onClick={() => handleQuickLogin('admin', 'SismoAdmin2026!Secret')}
               disabled={loading}
               className="p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left transition-all"
             >

@@ -39,6 +39,14 @@ export default function App() {
   useEffect(() => {
     async function fetchInitialData() {
       try {
+        if (!api.token) {
+          try {
+            const authRes = await api.login('admin', 'SismoAdmin2026!Secret');
+            setCurrentUser(authRes.user);
+          } catch (e) {
+            console.warn('Auto-authentication notice:', e);
+          }
+        }
         const [kpiRes, tsRes, sevRes, evRes] = await Promise.all([
           api.getKpis().catch(() => null),
           api.getTimeseries().catch(() => null),
@@ -113,7 +121,7 @@ export default function App() {
         eventSource.close();
       }
     };
-  }, [isPaused]);
+  }, [isPaused, currentUser]);
 
   // Check for active tsunami condition
   const tsunamiCount = kpis?.telemetry_24h?.tsunami_alerts_active || events.filter((e) => e.tsunami_alert).length;
