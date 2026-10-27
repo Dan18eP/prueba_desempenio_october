@@ -108,22 +108,40 @@ def get_kpis(db: Session = Depends(get_readonly_db)):
 @router.get("/stats/timeseries")
 def get_timeseries(db: Session = Depends(get_readonly_db)):
     """
-    Returns hourly seismic counts and peak magnitude for the last 24 hours.
+    Returns continuous hourly seismic counts and peak magnitude for the last 24 hours
+    standardized strictly to Hora Legal de Colombia (America/Bogota, COT).
     Used directly by Chart.js in the Tactical Control Center.
     """
     query = text("""
+        WITH hour_series AS (
+            SELECT generate_series(
+                DATE_TRUNC('hour', NOW() AT TIME ZONE 'America/Bogota') - INTERVAL '23 hours',
+                DATE_TRUNC('hour', NOW() AT TIME ZONE 'America/Bogota'),
+                INTERVAL '1 hour'
+            ) AS hr
+        ),
+        counts AS (
+            SELECT 
+                DATE_TRUNC('hour', event_time_utc AT TIME ZONE 'America/Bogota') as event_hr,
+                COUNT(*) as cnt,
+                MAX(magnitude) as max_mag
+            FROM curated.gold_earthquakes
+            WHERE event_time_utc >= NOW() - INTERVAL '24 hours'
+            GROUP BY 1
+        )
         SELECT 
-            TO_CHAR(DATE_TRUNC('hour', event_time_utc), 'YYYY-MM-DD HH24:00') as hour_label,
-            COUNT(*) as event_count,
-            COALESCE(MAX(magnitude), 0.0) as peak_magnitude
-        FROM curated.gold_earthquakes
-        GROUP BY DATE_TRUNC('hour', event_time_utc)
-        ORDER BY DATE_TRUNC('hour', event_time_utc) ASC
-        LIMIT 24
+            TO_CHAR(h.hr, 'HH24:00') as hour_label,
+            TO_CHAR(h.hr, 'YYYY-MM-DD HH24:00 COT') as full_label,
+            COALESCE(c.cnt, 0) as event_count,
+            COALESCE(c.max_mag, 0.0) as peak_magnitude
+        FROM hour_series h
+        LEFT JOIN counts c ON h.hr = c.event_hr
+        ORDER BY h.hr ASC
     """)
     rows = db.execute(query).mappings().fetchall()
     return {
         "hours": [r["hour_label"] for r in rows],
+        "full_hours": [r["full_label"] for r in rows],
         "counts": [r["event_count"] for r in rows],
         "magnitudes": [float(r["peak_magnitude"]) for r in rows]
     }

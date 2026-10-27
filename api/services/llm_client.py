@@ -171,7 +171,19 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
                 data=data
             )
 
-        explanation = parsed.get("explanation") or f"Consulta ejecutada con éxito. Se obtuvieron {len(rows)} registros."
+        raw_expl = str(parsed.get("explanation") or "").strip()
+        # Limpiar texto de plantilla repetido o caracteres iniciales truncados
+        if not raw_expl or "nterpretación analítica concisa" in raw_expl.lower() or raw_expl.lower().startswith("interpretación") or raw_expl.lower().startswith("nterpretación"):
+            if "tsunami" in clean_prompt.lower():
+                explanation = "Sismos con protocolo de alerta de tsunami activo registrados en la capa Gold:"
+            elif "anomal" in clean_prompt.lower():
+                explanation = "Eventos sísmicos clasificados como anomalías estadísticas (Z-Score > 2.5 o enjambres):"
+            elif "severidad" in clean_prompt.lower():
+                explanation = "Distribución de sismos en la capa Gold clasificados por nivel de severidad:"
+            else:
+                explanation = f"Consulta analítica ejecutada exitosamente sobre la capa Gold ({len(rows)} registros obtenidos):"
+        else:
+            explanation = raw_expl
         
         # Inyectar datos numéricos concretos y tablas Markdown enriquecidas
         if len(rows) == 1 and len(rows[0]) == 1:
@@ -182,27 +194,69 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
             explanation = f"{explanation}\n\nDatos obtenidos en Capa Gold:\n{summary_bullets}"
         elif rows:
             top_rows = rows[:5]
-            if len(cols) >= 3:
-                # Cabecera dinámica basada en los nombres reales de columnas
-                header_cols = [c.replace('_', ' ').capitalize() for c in cols]
-                table_lines = [
-                    "\n| " + " | ".join(header_cols) + " |",
-                    "| " + " | ".join([":---:" if "mag" in c or "depth" in c or "id" in c else ":---" for c in cols]) + " |"
-                ]
-                for r in top_rows:
-                    row_vals = []
-                    for val in r:
-                        if isinstance(val, float):
-                            row_vals.append(f"{val:.2f}")
-                        elif val is None:
-                            row_vals.append("--")
-                        else:
-                            row_vals.append(str(val))
-                    table_lines.append("| " + " | ".join(row_vals) + " |")
-                explanation = f"{explanation}\n\nSe identificaron **{len(rows)}** registros coincidentes en la capa Gold:\n" + "\n".join(table_lines)
-            else:
-                summary_bullets = "\n".join([f"- **{r[0]}**: {', '.join([str(c) for c in r[1:]])}" for r in top_rows])
-                explanation = f"{explanation}\n\nRegistros obtenidos en Capa Gold ({len(rows)} en total):\n{summary_bullets}"
+            # Mapeo y proyección estricta a máximo 5 columnas para legibilidad humana
+            KEY_COLUMNS = [
+                ("magnitude", "Magnitud"),
+                ("place", "Ubicación"),
+                ("depth_km", "Profundidad (km)"),
+                ("event_time_utc", "Hora Bogotá (COT)"),
+                ("severity_label", "Severidad"),
+                ("anomaly_explanation", "Detalle Criterio"),
+                ("tsunami_alert", "Alerta Tsunami")
+            ]
+            
+            projected_indices = []
+            projected_headers = []
+            for col_key, col_header in KEY_COLUMNS:
+                if col_key in cols:
+                    projected_indices.append(cols.index(col_key))
+                    projected_headers.append(col_header)
+
+            # Si no coincide con las columnas estándar, proyectar máximo las primeras 4 columnas
+            if not projected_indices:
+                projected_indices = list(range(min(4, len(cols))))
+                projected_headers = [cols[i].replace('_', ' ').capitalize() for i in projected_indices]
+
+            table_lines = [
+                "\n| " + " | ".join(projected_headers) + " |",
+                "| " + " | ".join([":---:" if "mag" in h.lower() or "prof" in h.lower() else ":---" for h in projected_headers]) + " |"
+            ]
+
+            for r in top_rows:
+                row_vals = []
+                for idx in projected_indices:
+                    val = r[idx]
+                    col_name = cols[idx]
+                    if col_name == "event_time_utc" and val:
+                        # Convertir a formato legible en hora Bogotá si es timestamp
+                        ts_str = str(val).split(".")[0].replace("T", " ")
+                        row_vals.append(ts_str)
+                    elif col_name == "magnitude" and isinstance(val, (int, float)):
+                        row_vals.append(f"**M {float(val):.1f}**")
+                    elif isinstance(val, float):
+                        row_vals.append(f"{val:.2f}")
+                    elif val is None:
+                        row_vals.append("--")
+                    else:
+                        row_vals.append(str(val))
+                table_lines.append("| " + " | ".join(row_vals) + " |")
+
+            explanation = f"{explanation}\n\nSe identificaron **{len(rows)}** registros coincidentes en la capa Gold:\n" + "\n".join(table_lines)
+
+        # Generar gráfico declarativo si la consulta es sobre tsunamis y el modelo no generó uno
+        if "tsunami" in clean_prompt.lower() and chart_obj["type"] == "none" and rows and "magnitude" in cols:
+            p_idx = cols.index("place") if "place" in cols else 0
+            m_idx = cols.index("magnitude")
+            t_labels = [str(r[p_idx])[:25] for r in rows[:6]]
+            t_data = [float(r[m_idx]) for r in rows[:6]]
+            chart_obj = build_declarative_chart(
+                chart_type="bar",
+                title="Sismos con Alerta de Tsunami (Magnitud por Región)",
+                labels=t_labels,
+                data=t_data,
+                dataset_label="Magnitud M",
+                color_palette=["#ef4444"] * len(t_data)
+            )
 
         latency_ms = int((time.time() - start_time) * 1000)
 

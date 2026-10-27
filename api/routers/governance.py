@@ -6,12 +6,18 @@ from api.core.database import get_readonly_db
 router = APIRouter(prefix="/api/governance", tags=["Data Lineage & Governance"])
 
 @router.get("/lineage")
-def get_data_lineage():
+def get_data_lineage(db: Session = Depends(get_readonly_db)):
     """
-    Returns OpenMetadata-compatible end-to-end lineage graph.
+    Returns OpenMetadata-compatible end-to-end lineage graph with LIVE database metrics.
     Represents:
-      USGS GeoJSON API -> MinIO Bronze -> PySpark Silver -> PostgreSQL Gold -> API & AI Agent
+      USGS GeoJSON API -> MinIO Bronze -> Pandera Silver -> PostgreSQL Gold -> API & AI Agent
     """
+    total_gold = db.execute(text("SELECT COUNT(*) FROM curated.gold_earthquakes")).scalar() or 0
+    total_bronze = db.execute(text("SELECT COALESCE(SUM(raw_count), 0) FROM audit.batch_reconciliation")).scalar() or 0
+    total_silver = db.execute(text("SELECT COALESCE(SUM(silver_count), 0) FROM audit.batch_reconciliation")).scalar() or 0
+    batches_count = db.execute(text("SELECT COUNT(*) FROM audit.batch_reconciliation")).scalar() or 0
+    total_24h = db.execute(text("SELECT COUNT(*) FROM curated.gold_earthquakes WHERE event_time_utc >= NOW() - INTERVAL '24 hours'")).scalar() or 0
+
     nodes = [
         {
             "id": "usgs_feed",
@@ -19,8 +25,9 @@ def get_data_lineage():
             "type": "EXTERNAL_API",
             "layer": "Source",
             "format": "GeoJSON",
-            "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson",
-            "description": "Feed público oficial de sismos del Servicio Geológico de EE.UU."
+            "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+            "live_count": total_24h,
+            "description": "Feed público oficial de sismos del Servicio Geológico de EE.UU. (Catálogo en vivo)."
         },
         {
             "id": "minio_bronze",
@@ -29,7 +36,9 @@ def get_data_lineage():
             "layer": "Bronze",
             "format": "JSON Raw",
             "path": "s3://sismowatch-lake/bronze/earthquakes/",
-            "description": "Ingesta directa sin pérdida. Almacenamiento inmutable."
+            "live_count": total_bronze,
+            "batches_count": batches_count,
+            "description": f"Ingesta directa sin pérdida ({total_bronze} eventos ingeridos en {batches_count} lotes inmutables)."
         },
         {
             "id": "refined_silver",
@@ -39,7 +48,8 @@ def get_data_lineage():
             "format": "Parquet Snappy",
             "path": "s3://sismowatch-lake/silver/earthquakes/",
             "engine": "Pandas & Pandera (ADR 0010)",
-            "description": "Deduplicación por updated DESC, tipado estricto, 7 reglas de calidad Pandera."
+            "live_count": total_silver,
+            "description": f"Deduplicación por updated DESC y validación estricta de 7 reglas Pandera ISO 25012 ({total_silver} registros)."
         },
         {
             "id": "postgres_gold",
@@ -48,7 +58,8 @@ def get_data_lineage():
             "layer": "Gold",
             "format": "Curated Relational",
             "table": "curated.gold_earthquakes",
-            "description": "Capa optimizada para Serving y AI. Garantía 'Me llegaron 20, mostré 20'."
+            "live_count": total_gold,
+            "description": f"Capa analítica Servicing y AI con índices B-Tree optimizados ({total_gold} sismos únicos consolidados)."
         },
         {
             "id": "fastapi_serving",
@@ -56,7 +67,8 @@ def get_data_lineage():
             "type": "API_SERVICE",
             "layer": "Serving",
             "endpoint": "http://localhost:8000/api",
-            "description": "Servidor backend con SSE en tiempo real y RBAC."
+            "live_count": total_24h,
+            "description": f"Servidor backend con SSE en tiempo real, RBAC y pool de conexiones de solo lectura."
         },
         {
             "id": "ai_agent",
@@ -70,8 +82,8 @@ def get_data_lineage():
 
     edges = [
         {"from": "usgs_feed", "to": "minio_bronze", "transformation": "Airflow HTTP Ingestion (dag_usgs_ingest)"},
-        {"from": "minio_bronze", "to": "pyspark_silver", "transformation": "PySpark Medallion Cleaning & Pandera Validation"},
-        {"from": "pyspark_silver", "to": "postgres_gold", "transformation": "PySpark JDBC Idempotent Upsert (ON CONFLICT id)"},
+        {"from": "minio_bronze", "to": "refined_silver", "transformation": "Limpieza Medallón y 7 Reglas Pandera (dag_medallion_processing)"},
+        {"from": "refined_silver", "to": "postgres_gold", "transformation": "Bulk Upsert Idempotente ON CONFLICT (id) en curated.gold_earthquakes"},
         {"from": "postgres_gold", "to": "fastapi_serving", "transformation": "SQLAlchemy Read-Only Pool (sismo_app_readonly)"},
         {"from": "postgres_gold", "to": "ai_agent", "transformation": "Text-to-SQL Safe SELECT Queries"}
     ]

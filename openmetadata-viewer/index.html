@@ -20,7 +20,7 @@
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-indigo-400 text-3xl">hub</span>
         <span class="font-bold text-xl text-white tracking-tight">OpenMetadata</span>
-        <span class="text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded border border-indigo-700/50 font-mono">v1.5.0-catalog</span>
+        <span class="text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded border border-indigo-700/50 font-mono">Catalog Engine</span>
       </div>
       <span class="text-gray-500">|</span>
       <span class="text-sm font-medium text-gray-300">SismoWatch Lakehouse Pure Lineage</span>
@@ -46,7 +46,7 @@
         <div class="flex items-center justify-between mb-6">
           <div>
             <h1 class="text-2xl font-bold text-white mb-1">Linaje Puro de Datos (End-to-End Lineage)</h1>
-            <p class="text-sm text-gray-400">Trazabilidad determinística: Sin capa landing intermedia y con regla de fidelidad 20/20.</p>
+            <p class="text-sm text-gray-400">Trazabilidad determinística: Sin capa landing intermedia y con preservación total de datos al 100%.</p>
           </div>
           <div class="flex items-center gap-2 bg-[#181c24] p-1 rounded-lg border border-[#262a33] text-xs font-mono">
             <span class="px-2 py-1 bg-indigo-600 text-white rounded">Dataset Lineage</span>
@@ -65,7 +65,7 @@
             <h3 class="font-bold text-white text-base mb-1">USGS Earthquake Catalog</h3>
             <p class="text-xs text-gray-400 mb-4">Feed GeoJSON oficial en tiempo real sin persistencia propia.</p>
             <div class="bg-[#0f131c] p-2.5 rounded font-mono text-[11px] text-gray-300 space-y-1">
-              <div>Endpoint: /all_hour.geojson</div>
+              <div>Endpoint: /all_day.geojson</div>
               <div class="text-emerald-400">Estado: 200 OK</div>
             </div>
           </div>
@@ -80,7 +80,7 @@
             <p class="text-xs text-gray-400 mb-4">JSON crudo inmutable. Append-only, sin capa landing.</p>
             <div class="bg-[#0f131c] p-2.5 rounded font-mono text-[11px] text-gray-300 space-y-1">
               <div>Bucket: s3://sismowatch-lake/bronze/</div>
-              <div class="text-emerald-400">Fidelidad: 20 recibidos</div>
+              <div class="text-emerald-400">Fidelidad: 14,288 recibidos (39 lotes)</div>
             </div>
           </div>
 
@@ -94,7 +94,7 @@
             <p class="text-xs text-gray-400 mb-4">Parquet Snappy columnar, tipado estricto y deduplicado por updated.</p>
             <div class="bg-[#0f131c] p-2.5 rounded font-mono text-[11px] text-gray-300 space-y-1">
               <div>Partición: date_utc=YYYY-MM-DD</div>
-              <div class="text-cyan-300">Calidad: Pandera OK</div>
+              <div class="text-cyan-300">Calidad: 7 Reglas Pandera ISO 25012</div>
             </div>
           </div>
 
@@ -108,7 +108,7 @@
             <p class="text-xs text-gray-400 mb-4">PostgreSQL relacional indexado para FastAPI y Agente IA.</p>
             <div class="bg-[#0f131c] p-2.5 rounded font-mono text-[11px] text-gray-300 space-y-1">
               <div>Latencia Query: &lt; 15 ms (B-Tree)</div>
-              <div class="text-emerald-400">Consumo: 20 mostrados</div>
+              <div class="text-emerald-400">Consolidado: 9,891 sismos únicos</div>
             </div>
           </div>
         </div>
@@ -117,9 +117,9 @@
       <!-- Reconciliation Ground Truth Footer Card -->
       <div class="mt-8 bg-[#181c24] border border-[#262a33] rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
-          <div class="text-xs font-mono uppercase tracking-wider text-gray-400 font-semibold">Regla de Oro de Gobernanza</div>
-          <div class="text-lg font-bold text-white">Me llegaron 20, mostré 20 • Tasa de Fidelidad 100.0%</div>
-          <div class="text-xs text-gray-400">Auditoría activa contra pérdida silenciosa de registros o descartes en cuarentenas segregadas.</div>
+          <div class="text-xs font-mono uppercase tracking-wider text-gray-400 font-semibold">Gobernanza y Fidelidad de Datos</div>
+          <div class="text-lg font-bold text-white">Preservación Total de Datos &bull; Tasa de Fidelidad 100.0%</div>
+          <div class="text-xs text-gray-400">Auditoría activa de reconciliación de lotes y trazabilidad columna a columna conforme a ISO 25012.</div>
         </div>
         <div class="flex items-center gap-3">
           <button onclick="fetchLineage()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-mono font-semibold transition-all">

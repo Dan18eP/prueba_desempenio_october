@@ -150,9 +150,10 @@ export default function App() {
     };
   }, [isPaused, currentUser]);
 
-  // Check for active tsunami condition
-  const tsunamiCount = kpis?.telemetry_24h?.tsunami_alerts_active || events.filter((e) => e.tsunami_alert).length;
-  const latestTsunami = events.find((e) => e.tsunami_alert);
+  // Check for active tsunami condition strictly scoped to current events in view
+  const currentTsunamiEvents = events.filter((e) => e.tsunami_alert);
+  const tsunamiCount = currentTsunamiEvents.length;
+  const latestTsunami = currentTsunamiEvents.length > 0 ? currentTsunamiEvents[0] : null;
 
   const handleLogout = () => {
     api.logout();

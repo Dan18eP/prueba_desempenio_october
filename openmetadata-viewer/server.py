@@ -20,7 +20,7 @@ LINEAGE_METADATA = {
             "displayName": "USGS Real-Time Feed (GeoJSON)",
             "type": "pipeline",
             "tier": "External Source",
-            "description": "API Oficial USGS: /summary/all_hour.geojson (Ingesta cada 5 min)"
+            "description": "API Oficial USGS: all_day.geojson (Ingesta cada 5 min) y all_month.geojson"
         },
         {
             "id": "bronze_feed",
@@ -37,7 +37,7 @@ LINEAGE_METADATA = {
             "displayName": "s3://sismowatch-lake/silver/earthquakes/",
             "type": "table",
             "tier": "Tier.Silver",
-            "description": "Parquet Snappy Columnar - Deduplicado por updated DESC y tipado con PySpark",
+            "description": "Parquet Snappy Columnar - Deduplicado por updated DESC y tipado estricto con Pandas & Pandera (ADR 0010)",
             "columns": ["id", "magnitude", "place", "event_time_utc", "longitude", "latitude", "depth_km", "tsunami_alert", "quality_status"]
         },
         {
@@ -74,7 +74,7 @@ LINEAGE_METADATA = {
         {"fromEntity": "silver_earthquakes", "toEntity": "gold_anomalies", "pipeline": "airflow.dag_medallion_processing"}
     ],
     "reconciliation": {
-        "rule": "Me llegaron 20, mostré 20",
+        "rule": "Preservación Total de Datos (100% Fidelidad)",
         "fidelityRate": "100.0%",
         "quarantineMode": "Auditoría no destructiva (flags en quality_metrics)",
         "governanceEngine": "OpenMetadata Compatible Specification"

@@ -202,13 +202,13 @@ export default function ControlCenterView({
     };
   }, [events]);
 
-  // Chart 1: Hourly Timeseries
+  // Chart 1: Hourly Timeseries (Hora Legal de Colombia America/Bogota)
   const timeseriesChartData = {
-    labels: timeseries?.hours?.map((h) => h.slice(11, 16)) || [],
+    labels: timeseries?.hours?.map((h) => (h.length > 5 ? h.slice(11, 16) : h)) || [],
     datasets: [
       {
         type: 'bar',
-        label: 'Eventos por Hora',
+        label: 'Eventos por Hora (COT)',
         data: timeseries?.counts || [],
         backgroundColor: 'rgba(99, 102, 241, 0.5)',
         borderColor: '#6366f1',
@@ -380,7 +380,7 @@ export default function ControlCenterView({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-3 rounded-xl bg-[#0e121a] border border-[#262a33]">
                 <div className="text-[11px] font-mono uppercase text-gray-400 mb-2">
-                  Actividad Sismica Horaria (24h)
+                  Actividad Sismica Horaria (24h - Hora Bogota COT)
                 </div>
                 <div className="h-40">
                   <Bar data={timeseriesChartData} options={timeseriesOptions} />
@@ -480,10 +480,12 @@ export default function ControlCenterView({
         </div>
 
         {/* Date Range Custom Filter */}
-        <div className="py-1.5 flex items-center gap-1.5 border-b border-[#262a33] text-[10px] font-mono">
-          <span className="text-gray-400 shrink-0">Filtro Fecha:</span>
+        <div className="py-1.5 flex flex-wrap items-center gap-1.5 border-b border-[#262a33] text-[10px] font-mono">
+          <span className="text-gray-400 shrink-0">Rango (max 30d):</span>
           <input
             type="date"
+            min="2026-09-27"
+            max="2026-10-27"
             value={customStartDate}
             onChange={(e) => setCustomStartDate(e.target.value)}
             className="px-1.5 py-0.5 rounded bg-[#0a0e16] border border-[#262a33] text-gray-200 text-[10px]"
@@ -491,6 +493,8 @@ export default function ControlCenterView({
           <span className="text-gray-500">-</span>
           <input
             type="date"
+            min="2026-09-27"
+            max="2026-10-27"
             value={customEndDate}
             onChange={(e) => setCustomEndDate(e.target.value)}
             className="px-1.5 py-0.5 rounded bg-[#0a0e16] border border-[#262a33] text-gray-200 text-[10px]"
@@ -502,22 +506,46 @@ export default function ControlCenterView({
           >
             Aplicar
           </button>
+          {(customStartDate || customEndDate) && (
+            <button
+              onClick={() => {
+                setCustomStartDate('');
+                setCustomEndDate('');
+                onTimeWindowChange && onTimeWindowChange('24h');
+              }}
+              className="px-2 py-0.5 rounded bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 text-[10px] transition-colors"
+            >
+              Limpiar
+            </button>
+          )}
         </div>
 
         {/* Filter Toolbar */}
         <div className="py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono border-b border-[#262a33]">
-          {/* Tsunami Dedicated Filter */}
-          <button
-            onClick={() => setTsunamiOnlyFilter(!tsunamiOnlyFilter)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-bold transition-colors ${
-              tsunamiOnlyFilter
-                ? 'bg-red-600 text-white shadow-md'
-                : 'bg-red-950/30 text-red-300 border border-red-500/30 hover:bg-red-900/40'
-            }`}
-          >
-            <Waves className="w-3 h-3" />
-            <span>Alertas Tsunami ({tsunamiEventsCount})</span>
-          </button>
+          {/* Tsunami Dedicated Filter with Reset Toggle */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setTsunamiOnlyFilter(!tsunamiOnlyFilter)}
+              title={tsunamiEventsCount === 0 ? "No hay alertas activas en esta ventana. Cambia a 7d o 30d para ver eventos históricos." : ""}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-bold transition-colors ${
+                tsunamiOnlyFilter
+                  ? 'bg-red-600 text-white shadow-md'
+                  : 'bg-red-950/30 text-red-300 border border-red-500/30 hover:bg-red-900/40'
+              }`}
+            >
+              <Waves className="w-3 h-3" />
+              <span>Alertas Tsunami ({tsunamiEventsCount})</span>
+            </button>
+
+            {tsunamiOnlyFilter && (
+              <button
+                onClick={() => setTsunamiOnlyFilter(false)}
+                className="px-2 py-1 rounded bg-[#1f2430] hover:bg-[#282e3d] text-gray-200 hover:text-white text-xs border border-[#424754] font-mono transition-colors"
+              >
+                Ver Todos
+              </button>
+            )}
+          </div>
 
           {/* Magnitude Threshold Filter */}
           <div className="flex items-center gap-1">

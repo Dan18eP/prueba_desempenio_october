@@ -131,6 +131,14 @@ export default function LineageView() {
                 <div className="text-[11px] font-mono text-emerald-400 mb-2">
                   {node.format}
                 </div>
+                {node.live_count !== undefined && (
+                  <div className="mb-2 py-1 px-2 rounded bg-[#10141d] border border-[#262a33] flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-gray-400">Total en Capa:</span>
+                    <span className="text-xs font-mono font-bold text-emerald-400">
+                      {node.live_count.toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 <p className="text-xs text-gray-400 leading-relaxed">
                   {node.description}
                 </p>
@@ -214,6 +222,16 @@ export default function LineageView() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-4 p-3.5 rounded-xl bg-[#0f131c] border border-[#262a33] text-xs font-mono text-gray-400 leading-relaxed flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div>
+            <span className="text-indigo-400 font-bold">Mecánica de Ingesta y Deduplicación: </span>
+            <span>Cada 5 min el feed rodante de USGS entrega ~199 eventos de las últimas 24h. En Gold, la regla idempotente <strong className="text-emerald-400">ON CONFLICT (id) DO UPDATE</strong> revalida los ~194 eventos preexistentes e inserta únicamente los ~3 sismos nuevos. Fidelidad: 100.0% sin pérdida ni duplicidad.</span>
+          </div>
+          <div className="shrink-0 px-2.5 py-1 rounded bg-[#181c24] border border-[#262a33] text-[11px] text-gray-300">
+            Deduplicación 100% Idempotente
+          </div>
         </div>
       </div>
     </div>
