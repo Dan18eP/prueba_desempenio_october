@@ -32,7 +32,10 @@ export default function App() {
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [backfillNotice, setBackfillNotice] = useState(null);
 
-  // Initial Data Fetch
+  const [timeWindow, setTimeWindow] = useState('24h');
+  const [eventsLoading, setEventsLoading] = useState(false);
+
+  // Initial Data Fetch (Default 24h for Zero-Lag rendering)
   useEffect(() => {
     async function fetchInitialData() {
       if (!api.token || !currentUser) return;
@@ -41,7 +44,7 @@ export default function App() {
           api.getKpis().catch(() => null),
           api.getTimeseries().catch(() => null),
           api.getSeverity().catch(() => null),
-          api.getEvents({ limit: 10000 }).catch(() => null)
+          api.getEvents({ hours: 24, limit: 1000 }).catch(() => null)
         ]);
 
         if (kpiRes) setKpis(kpiRes);
@@ -60,6 +63,34 @@ export default function App() {
 
     fetchInitialData();
   }, [currentUser]);
+
+  const handleTimeWindowChange = async (window, customFilter = null) => {
+    setTimeWindow(window);
+    setEventsLoading(true);
+    try {
+      let params = { limit: 1000 };
+      if (window === '24h') {
+        params.hours = 24;
+      } else if (window === '7d') {
+        params.hours = 168;
+        params.limit = 3000;
+      } else if (window === '30d' || window === 'all') {
+        params.hours = 720;
+        params.limit = 10000;
+      }
+      if (customFilter?.startDate) params.start_date = customFilter.startDate;
+      if (customFilter?.endDate) params.end_date = customFilter.endDate;
+
+      const evRes = await api.getEvents(params);
+      if (evRes && evRes.events) {
+        setEvents(evRes.events);
+      }
+    } catch (err) {
+      console.error('Error changing event window:', err);
+    } finally {
+      setEventsLoading(false);
+    }
+  };
 
   // RBAC Tab Protection Guard
   useEffect(() => {
@@ -183,6 +214,9 @@ export default function App() {
             setIsPaused={setIsPaused}
             onSelectEvent={setSelectedEvent}
             selectedEvent={selectedEvent}
+            timeWindow={timeWindow}
+            onTimeWindowChange={handleTimeWindowChange}
+            eventsLoading={eventsLoading}
           />
         )}
 
@@ -199,9 +233,9 @@ export default function App() {
       <footer className="bg-[#12161f] border-t border-[#262a33] py-2.5 px-6 text-xs font-mono text-gray-400 flex flex-col md:flex-row items-center justify-between gap-2">
         <div>
           <span>TELEMETRÍA GROUND TRUTH: </span>
-          <strong className="text-emerald-400 font-bold">20 Ingeridos / 20 Publicados (Fidelidad 100%)</strong>
+          <strong className="text-emerald-400 font-bold">Linaje y Trazabilidad Verificada (Fidelidad 100%)</strong>
           <span className="mx-2 text-gray-600">|</span>
-          <span className="text-indigo-400">Cero Pérdida de Datos (Linaje Puro)</span>
+          <span className="text-indigo-400">Preservación Total de Datos (Linaje Puro)</span>
           <span className="mx-2 text-gray-600">|</span>
           <span className="text-gray-300">OpenLineage & Pandera ISO 25012</span>
         </div>

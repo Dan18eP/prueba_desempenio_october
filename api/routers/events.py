@@ -10,6 +10,9 @@ router = APIRouter(prefix="/api/events", tags=["Earthquake Events"])
 def list_events(
     limit: int = Query(500, ge=1, le=10000),
     offset: int = Query(0, ge=0),
+    hours: Optional[int] = Query(None, ge=0, le=720),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
     min_magnitude: Optional[float] = Query(None, ge=0.0, le=10.0),
     severity: Optional[str] = Query(None),
     tsunami_only: bool = Query(False),
@@ -19,10 +22,22 @@ def list_events(
 ):
     """
     Returns paginated seismic events from curated.gold_earthquakes.
-    Supports filtering by magnitude, severity, tsunami alert, anomalies, and location text search.
+    Supports filtering by time window (hours), date range, magnitude, severity, tsunami alert, anomalies, and location text search.
     """
     conditions = ["1=1"]
     params = {"limit": limit, "offset": offset}
+
+    if start_date:
+        conditions.append("event_time_utc >= :start_date::timestamptz")
+        params["start_date"] = start_date
+
+    if end_date:
+        conditions.append("event_time_utc <= :end_date::timestamptz")
+        params["end_date"] = end_date
+
+    if hours is not None and hours > 0 and not start_date:
+        conditions.append("event_time_utc >= NOW() - (:hours || ' hours')::INTERVAL")
+        params["hours"] = str(hours)
 
     if min_magnitude is not None:
         conditions.append("magnitude >= :min_mag")

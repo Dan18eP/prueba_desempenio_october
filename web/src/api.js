@@ -71,7 +71,11 @@ class ApiService {
   }
 
   async getEvents(params = {}) {
-    const query = new URLSearchParams(params).toString();
+    const cleanParams = { ...params };
+    if (cleanParams.hours === undefined && !cleanParams.start_date) {
+      cleanParams.hours = 24;
+    }
+    const query = new URLSearchParams(cleanParams).toString();
     const res = await fetch(`${API_BASE_URL}/api/events?${query}`, {
       headers: this.getHeaders()
     });
@@ -79,8 +83,8 @@ class ApiService {
     return res.json();
   }
 
-  async getLatestReport() {
-    const res = await fetch(`${API_BASE_URL}/api/reports/latest`, {
+  async getLatestReport(window = '24h') {
+    const res = await fetch(`${API_BASE_URL}/api/reports/latest?window=${window}`, {
       headers: this.getHeaders()
     });
     if (!res.ok) throw new Error('Error al obtener reporte ejecutivo');
@@ -95,9 +99,9 @@ class ApiService {
     return res.json();
   }
 
-  getExportUrl(format = 'csv') {
+  getExportUrl(format = 'csv', window = '24h') {
     const tokenParam = this.token ? `&token=${encodeURIComponent(this.token)}` : '';
-    return `${API_BASE_URL}/api/reports/export?format=${format}${tokenParam}`;
+    return `${API_BASE_URL}/api/reports/export?format=${format}&window=${window}${tokenParam}`;
   }
 
   async askChat(prompt) {
@@ -165,8 +169,8 @@ class ApiService {
     return res.json();
   }
 
-  async regenerateReport() {
-    const res = await fetch(`${API_BASE_URL}/api/admin/reports/regenerate`, {
+  async regenerateReport(window = '24h') {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/regenerate?window=${window}`, {
       method: 'POST',
       headers: this.getHeaders()
     });

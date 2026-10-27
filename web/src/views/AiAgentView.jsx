@@ -40,20 +40,26 @@ export default function AiAgentView({ currentUser }) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
+  const [reportWindow, setReportWindow] = useState('24h'); // '24h' | '7d' | '30d'
+  const [reportLoading, setReportLoading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [actionMessage, setActionMessage] = useState(null);
 
-  useEffect(() => {
-    async function loadReport() {
-      try {
-        const data = await api.getLatestReport();
-        setReport(data);
-      } catch (err) {
-        console.error('Error cargando reporte:', err);
-      }
+  const loadReport = async (window) => {
+    setReportLoading(true);
+    try {
+      const data = await api.getLatestReport(window);
+      setReport(data);
+    } catch (err) {
+      console.error('Error cargando reporte:', err);
+    } finally {
+      setReportLoading(false);
     }
-    loadReport();
-  }, []);
+  };
+
+  useEffect(() => {
+    loadReport(reportWindow);
+  }, [reportWindow]);
 
   const handleSend = async (userText) => {
     const query = userText || prompt;
@@ -102,9 +108,8 @@ export default function AiAgentView({ currentUser }) {
     setRegenerating(true);
     setActionMessage(null);
     try {
-      const res = await api.regenerateReport();
-      const newReport = await api.getLatestReport();
-      setReport(newReport);
+      const res = await api.regenerateReport(reportWindow);
+      await loadReport(reportWindow);
       setActionMessage({ type: 'success', text: res.message || 'Reporte regenerado exitosamente.' });
     } catch (err) {
       setActionMessage({ type: 'error', text: err.message });
@@ -275,13 +280,38 @@ export default function AiAgentView({ currentUser }) {
           {currentUser?.role === 'admin' && (
             <button
               onClick={handleRegenerateReport}
-              disabled={regenerating}
+              disabled={regenerating || reportLoading}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-mono transition-colors"
             >
               <RefreshCw className={`w-3 h-3 ${regenerating ? 'animate-spin' : ''}`} />
               <span>Regenerar</span>
             </button>
           )}
+        </div>
+
+        {/* Time Window Switcher Tabs */}
+        <div className="py-2.5 flex items-center justify-between border-b border-[#262a33] text-xs font-mono">
+          <span className="text-gray-400 text-[11px]">Período de Análisis:</span>
+          <div className="flex items-center gap-1">
+            {[
+              { id: '24h', label: '24 Horas' },
+              { id: '7d', label: '7 Días' },
+              { id: '30d', label: '30 Días / Mes' }
+            ].map((win) => (
+              <button
+                key={win.id}
+                onClick={() => setReportWindow(win.id)}
+                disabled={reportLoading}
+                className={`px-2.5 py-1 rounded text-xs transition-colors ${
+                  reportWindow === win.id
+                    ? 'bg-indigo-600 text-white font-bold shadow-sm'
+                    : 'bg-[#181c24] text-gray-400 hover:text-white border border-[#262a33]'
+                }`}
+              >
+                {win.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {actionMessage && (
@@ -298,7 +328,12 @@ export default function AiAgentView({ currentUser }) {
         )}
 
         {/* Report Content */}
-        {report ? (
+        {reportLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-xs font-mono text-indigo-400 gap-2 p-8">
+            <span className="w-3 h-3 rounded-full bg-indigo-400 animate-ping"></span>
+            <span>Generando informe analítico ({reportWindow})...</span>
+          </div>
+        ) : report ? (
           <div className="space-y-4 py-3">
             <div>
               <span className="text-[10px] font-mono uppercase bg-indigo-950/60 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded font-bold">
@@ -334,11 +369,15 @@ export default function AiAgentView({ currentUser }) {
                   </div>
                   <div className="p-2 rounded bg-[#0a0e16] border border-[#262a33]">
                     <div className="text-gray-500 text-[10px]">Profundidad Prom.</div>
-                    <div className="text-base font-bold text-indigo-300">{report.verified_metrics.avg_depth_km} km</div>
+                    <div className="text-base font-bold text-indigo-300">
+                      {report.verified_metrics.avg_depth_km ?? report.verified_metrics.avg_depth ?? '0.0'} km
+                    </div>
                   </div>
                   <div className="p-2 rounded bg-[#0a0e16] border border-[#262a33]">
                     <div className="text-gray-500 text-[10px]">Alertas Tsunami</div>
-                    <div className="text-base font-bold text-red-400">{report.verified_metrics.tsunami_alerts}</div>
+                    <div className="text-base font-bold text-red-400">
+                      {report.verified_metrics.tsunami_alerts ?? report.verified_metrics.tsunami_alerts_count ?? 0}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -347,7 +386,7 @@ export default function AiAgentView({ currentUser }) {
             {/* Export Toolbar */}
             <div className="pt-2 border-t border-[#262a33] flex items-center justify-between gap-3">
               <a
-                href={api.getExportUrl('csv')}
+                href={api.getExportUrl('csv', reportWindow)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 py-2 px-3 rounded-xl bg-[#181c24] hover:bg-[#1f2430] border border-[#262a33] text-indigo-300 hover:text-white text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors"
@@ -357,7 +396,7 @@ export default function AiAgentView({ currentUser }) {
               </a>
 
               <a
-                href={api.getExportUrl('html')}
+                href={api.getExportUrl('html', reportWindow)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors shadow-md"

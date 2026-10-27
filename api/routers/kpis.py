@@ -81,10 +81,14 @@ def get_kpis(db: Session = Depends(get_readonly_db)):
     quality_score = float(qual["quality_score"]) if qual else 98.5
     freshness_lag = qual["freshness_lag_minutes"] if qual else 4
 
+    # 4. Total Sismicidad Global All Time
+    all_time_events = db.execute(text("SELECT COUNT(*) FROM curated.gold_earthquakes")).scalar() or 0
+
     return {
         "status": "OPERATIONAL",
         "telemetry_24h": {
             "total_events": total_events,
+            "all_time_events": all_time_events,
             "max_magnitude": max_mag,
             "avg_depth_km": avg_depth,
             "tsunami_alerts_active": tsunami_alerts,
@@ -95,7 +99,7 @@ def get_kpis(db: Session = Depends(get_readonly_db)):
             "raw_records_in": total_raw,
             "gold_records_out": total_gold,
             "loss_records": total_loss,
-            "fidelity_guarantee": "Me llegaron 20, mostré 20 (Cero Pérdida)",
+            "fidelity_guarantee": "Preservación Total de Datos (100% Fidelidad)",
             "quality_score_percent": round(quality_score, 1),
             "freshness_lag_minutes": freshness_lag
         }

@@ -46,7 +46,10 @@ export default function ControlCenterView({
   isPaused,
   setIsPaused,
   onSelectEvent,
-  selectedEvent
+  selectedEvent,
+  timeWindow = '24h',
+  onTimeWindowChange,
+  eventsLoading = false
 }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -55,6 +58,8 @@ export default function ControlCenterView({
   const [minMagFilter, setMinMagFilter] = useState(0.0);
   const [tsunamiOnlyFilter, setTsunamiOnlyFilter] = useState(false);
   const [activeChartTab, setActiveChartTab] = useState('overview'); // 'overview' | 'depth_regions'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   // Initialize Leaflet Map with Canvas renderer for high throughput
   useEffect(() => {
@@ -427,6 +432,11 @@ export default function ControlCenterView({
             <span className="text-xs font-mono text-gray-400">
               ({filteredEvents.length} eventos)
             </span>
+            {eventsLoading && (
+              <span className="text-[10px] font-mono text-indigo-400 animate-pulse">
+                Cargando...
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -444,8 +454,58 @@ export default function ControlCenterView({
           </div>
         </div>
 
+        {/* Time Window Buttons */}
+        <div className="py-2 flex items-center justify-between gap-1 border-b border-[#262a33] text-xs font-mono">
+          <span className="text-gray-400 text-[11px] shrink-0">Ventana:</span>
+          <div className="flex items-center gap-1">
+            {[
+              { id: '24h', label: '24 Horas' },
+              { id: '7d', label: '7 Días' },
+              { id: '30d', label: '30 Días / Todos' }
+            ].map((win) => (
+              <button
+                key={win.id}
+                onClick={() => onTimeWindowChange && onTimeWindowChange(win.id)}
+                disabled={eventsLoading}
+                className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                  timeWindow === win.id
+                    ? 'bg-indigo-600 text-white font-bold'
+                    : 'bg-[#181c24] text-gray-400 hover:text-white border border-[#262a33]'
+                }`}
+              >
+                {win.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date Range Custom Filter */}
+        <div className="py-1.5 flex items-center gap-1.5 border-b border-[#262a33] text-[10px] font-mono">
+          <span className="text-gray-400 shrink-0">Filtro Fecha:</span>
+          <input
+            type="date"
+            value={customStartDate}
+            onChange={(e) => setCustomStartDate(e.target.value)}
+            className="px-1.5 py-0.5 rounded bg-[#0a0e16] border border-[#262a33] text-gray-200 text-[10px]"
+          />
+          <span className="text-gray-500">-</span>
+          <input
+            type="date"
+            value={customEndDate}
+            onChange={(e) => setCustomEndDate(e.target.value)}
+            className="px-1.5 py-0.5 rounded bg-[#0a0e16] border border-[#262a33] text-gray-200 text-[10px]"
+          />
+          <button
+            onClick={() => onTimeWindowChange && onTimeWindowChange('custom', { startDate: customStartDate, endDate: customEndDate })}
+            disabled={!customStartDate || !customEndDate || eventsLoading}
+            className="px-2 py-0.5 rounded bg-[#181c24] hover:bg-indigo-600 text-gray-300 hover:text-white border border-[#262a33] text-[10px] transition-colors disabled:opacity-40"
+          >
+            Aplicar
+          </button>
+        </div>
+
         {/* Filter Toolbar */}
-        <div className="py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono border-b border-[#262a33]">
+        <div className="py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono border-b border-[#262a33]">
           {/* Tsunami Dedicated Filter */}
           <button
             onClick={() => setTsunamiOnlyFilter(!tsunamiOnlyFilter)}
@@ -522,8 +582,9 @@ export default function ControlCenterView({
                       </span>
                     </div>
 
-                    <div className="text-[11px] font-mono text-gray-400 shrink-0">
-                      {formatBogotaTimeOnly(e.event_time_utc)}
+                    <div className="text-[10px] font-mono text-gray-400 shrink-0 text-right">
+                      <div>{formatBogotaDate(e.event_time_utc, false)}</div>
+                      <div className="text-gray-300 font-semibold">{formatBogotaTimeOnly(e.event_time_utc)}</div>
                     </div>
                   </div>
 

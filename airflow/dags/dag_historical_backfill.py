@@ -268,12 +268,12 @@ def execute_backfill(**context):
 with DAG(
     dag_id="dag_historical_backfill",
     default_args=default_args,
-    description="Backfill histórico parametrizado de los últimos 30 días desde USGS",
+    description="[Medallion Completo] Backfill histórico parametrizado de los últimos 30 días desde USGS",
     schedule_interval=None,
     start_date=datetime(2026, 10, 1),
     catchup=False,
     max_active_runs=1,
-    tags=["backfill", "historico", "usgs", "parametrizado"],
+    tags=["medallion-full", "backfill-historico", "capa-bronze-silver-gold", "usgs"],
     params={
         "start_date": Param("", type=["null", "string"], description="Fecha inicio YYYY-MM-DD (por defecto hace 30 días)"),
         "end_date": Param("", type=["null", "string"], description="Fecha fin YYYY-MM-DD (por defecto hoy)"),
@@ -283,7 +283,7 @@ with DAG(
 ) as dag:
 
     backfill_task = PythonOperator(
-        task_id="execute_backfill",
+        task_id="medallion__execute_backfill",
         python_callable=execute_backfill,
         provide_context=True
     )

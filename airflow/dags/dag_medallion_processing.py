@@ -197,9 +197,9 @@ def transform_silver_to_gold(**context):
     """
     dag_run = context.get("dag_run")
     batch_id = dag_run.conf.get("batch_id") if dag_run and dag_run.conf else f"batch_{int(datetime.now(timezone.utc).timestamp())}"
-    raw_count = context["ti"].xcom_pull(task_ids="transform_bronze_to_silver", key="raw_count") or 0
-    silver_count = context["ti"].xcom_pull(task_ids="transform_bronze_to_silver", key="silver_count") or 0
-    batch_ids = context["ti"].xcom_pull(task_ids="transform_bronze_to_silver", key="batch_ids") or []
+    raw_count = context["ti"].xcom_pull(task_ids="silver__transform_bronze_to_silver", key="raw_count") or 0
+    silver_count = context["ti"].xcom_pull(task_ids="silver__transform_bronze_to_silver", key="silver_count") or 0
+    batch_ids = context["ti"].xcom_pull(task_ids="silver__transform_bronze_to_silver", key="batch_ids") or []
 
     logger.info(f"[MEDALLION-GOLD] Starting Silver -> Gold transformation for {batch_id} (Batch size: {len(batch_ids)})")
 
@@ -385,23 +385,23 @@ def transform_silver_to_gold(**context):
 with DAG(
     dag_id="dag_medallion_processing",
     default_args=default_args,
-    description="Procesamiento Medallón: Limpieza Silver y sincronización a Gold Curated",
+    description="[Capa Silver y Gold] Procesamiento Medallón: Limpieza Silver y sincronización a Gold Curated",
     schedule_interval=None, # Disparado reactivamente por dag_usgs_ingest
     start_date=datetime(2026, 10, 1),
     catchup=False,
     max_active_runs=1,
-    tags=["transformacion", "medallion", "calidad", "lakehouse"],
+    tags=["capa-silver", "capa-gold", "pandera-calidad", "anomalias-ml", "medallion"],
     doc_md=DOC_MD
 ) as dag:
 
     transform_silver_task = PythonOperator(
-        task_id="transform_bronze_to_silver",
+        task_id="silver__transform_bronze_to_silver",
         python_callable=transform_bronze_to_silver,
         provide_context=True
     )
 
     transform_gold_task = PythonOperator(
-        task_id="transform_silver_to_gold",
+        task_id="gold__transform_silver_to_gold",
         python_callable=transform_silver_to_gold,
         provide_context=True
     )

@@ -41,20 +41,41 @@ Tablas disponibles en esquema curated (PostgreSQL):
 
 # nosec B608
 SYSTEM_PROMPT = f"""
-Eres SismoWatch AI, asistente de inteligencia sismológica y Text-to-SQL.
-Tu tarea es convertir la pregunta del usuario en una consulta SQL de solo lectura (SELECT) sobre las tablas del esquema curated.
+Eres SismoWatch AI, asistente analítico y especialista en Text-to-SQL sismológico para operaciones críticas.
+Tu tarea es convertir la pregunta del usuario en una consulta SQL de solo lectura (SELECT) precisa y segura sobre las tablas del esquema curated.
 
 {GOLD_SCHEMA_CONTEXT}
 
-REGLAS DE SEGURIDAD ESTRICTAS:
+REGLAS DE GENERACIÓN SQL ESTRICTAS:
 1. Solo genera consultas SELECT. Jamás uses INSERT, UPDATE, DELETE, DROP ni ALTER.
 2. Todas las consultas deben ejecutarse contra las tablas curated.gold_earthquakes o curated.gold_hourly_kpis.
-3. Responde ÚNICAMENTE con un JSON válido con este formato:
+3. FILTROS DE TIEMPO INTELIGENTES:
+   - Si el usuario menciona "hoy", "últimas 24 horas", "recientes" o "en curso":
+     Agrega: WHERE event_time_utc >= NOW() - INTERVAL '24 hours'
+   - Si menciona "última semana" o "7 días":
+     Agrega: WHERE event_time_utc >= NOW() - INTERVAL '7 days'
+   - Si menciona "mes", "últimos 30 días", "histórico", "total" o no especifica tiempo:
+     Consulta sin límite de fecha para abarcar el catálogo completo.
+4. REGLAS DE CONDICIONES ESPECIALES:
+   - "tsunami": WHERE tsunami_alert = TRUE
+   - "anomalía", "anomalías", "enjambre": WHERE is_anomaly = TRUE
+5. ORDENAMIENTO Y LÍMITES EN LISTADOS:
+   - Cuando el usuario pida ver sismos, anomalías o listados ("cuáles son", "muestra", "top", "más fuertes"):
+     Selecciona columnas clave: magnitude, place, depth_km, severity_label, anomaly_explanation, event_time_utc
+     Ordena siempre: ORDER BY magnitude DESC (o event_time_utc DESC si pide recientes)
+     Limita siempre: LIMIT 5 o LIMIT 10 (nunca devuelvas miles de filas sin límite).
+6. SELECCIÓN DE GRÁFICO (chart_type):
+   - Series por hora o tendencia temporal -> "line"
+   - Comparación de categorías, regiones o severidades -> "bar"
+   - Proporciones o distribución porcentual -> "doughnut" o "pie"
+   - Respuestas puntuales, escalares o tablas de sismos específicos -> "none"
+
+Responde ÚNICAMENTE con un JSON válido con este formato (opciones para chart_type: "bar", "line", "doughnut", "pie", "none"):
 {{
   "sql_query": "SELECT severity_label, COUNT(*) FROM curated.gold_earthquakes GROUP BY severity_label ORDER BY count DESC;",
-  "chart_type": "bar", // Opciones: "bar", "line", "doughnut", "none"
+  "chart_type": "bar",
   "chart_title": "Distribución por Severidad",
-  "explanation": "Breve explicación en español de lo que responderá la consulta."
+  "explanation": "Interpretación analítica concisa del resultado como experto sismólogo."
 }}
 """
 
@@ -106,7 +127,8 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
             res.raise_for_status()
             res_data = res.json()
             raw_response = res_data.get("response", "")
-            parsed = json.loads(raw_response)
+            clean_json_str = re.sub(r'//.*', '', raw_response)
+            parsed = json.loads(clean_json_str)
             prompt_tokens = res_data.get("prompt_eval_count", 0)
             completion_tokens = res_data.get("eval_count", 0)
 
@@ -117,7 +139,9 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
         logger.info(f"[LLM_DUAL] Validated SQL: {validated_sql}")
 
         # 2. Ejecutar SQL en modo Solo Lectura
-        rows = db.execute(text(validated_sql)).fetchall()
+        sql_res = db.execute(text(validated_sql))
+        cols = list(sql_res.keys())
+        rows = sql_res.fetchall()
         
         # 3. Construir Gráfico Declarativo si aplica
         chart_type = parsed.get("chart_type", "none").lower()
@@ -125,8 +149,21 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
         
         chart_obj = {"type": "none"}
         if chart_type != "none" and rows and len(rows[0]) >= 2:
-            labels = [str(r[0]) for r in rows]
-            data = [float(r[1]) if isinstance(r[1], (int, float)) else str(r[1]) for r in rows]
+            # Seleccionar columnas de etiqueta y métrica inteligentemente
+            lbl_idx = 0
+            val_idx = 1
+            if len(cols) >= 2:
+                for idx, c in enumerate(cols):
+                    if c in ("place", "severity_label", "hour_utc", "id"):
+                        lbl_idx = idx
+                        break
+                for idx, c in enumerate(cols):
+                    if idx != lbl_idx and (c in ("count", "magnitude", "total_events", "max_magnitude", "depth_km") or isinstance(rows[0][idx], (int, float))):
+                        val_idx = idx
+                        break
+
+            labels = [str(r[lbl_idx]) for r in rows[:15]]
+            data = [float(r[val_idx]) if isinstance(r[val_idx], (int, float)) else str(r[val_idx]) for r in rows[:15]]
             chart_obj = build_declarative_chart(
                 chart_type=chart_type,
                 title=chart_title,
@@ -136,15 +173,37 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
 
         explanation = parsed.get("explanation") or f"Consulta ejecutada con éxito. Se obtuvieron {len(rows)} registros."
         
-        # Inyectar datos numéricos concretos de la base de datos para máxima interactividad
+        # Inyectar datos numéricos concretos y tablas Markdown enriquecidas
         if len(rows) == 1 and len(rows[0]) == 1:
             val = rows[0][0]
             explanation = f"Se registran **{val}** en la base de datos (capa Gold). {explanation}"
-        elif rows and len(rows) <= 8 and len(rows[0]) >= 2:
+        elif rows and len(rows) <= 10 and len(rows[0]) == 2 and not isinstance(rows[0][1], str):
             summary_bullets = "\n".join([f"- **{r[0]}**: {r[1]}" for r in rows])
             explanation = f"{explanation}\n\nDatos obtenidos en Capa Gold:\n{summary_bullets}"
         elif rows:
-            explanation = f"{explanation}\n\nSe encontraron {len(rows)} registros coincidentes en la capa Gold."
+            top_rows = rows[:5]
+            if len(cols) >= 3:
+                # Cabecera dinámica basada en los nombres reales de columnas
+                header_cols = [c.replace('_', ' ').capitalize() for c in cols]
+                table_lines = [
+                    "\n| " + " | ".join(header_cols) + " |",
+                    "| " + " | ".join([":---:" if "mag" in c or "depth" in c or "id" in c else ":---" for c in cols]) + " |"
+                ]
+                for r in top_rows:
+                    row_vals = []
+                    for val in r:
+                        if isinstance(val, float):
+                            row_vals.append(f"{val:.2f}")
+                        elif val is None:
+                            row_vals.append("--")
+                        else:
+                            row_vals.append(str(val))
+                    table_lines.append("| " + " | ".join(row_vals) + " |")
+                explanation = f"{explanation}\n\nSe identificaron **{len(rows)}** registros coincidentes en la capa Gold:\n" + "\n".join(table_lines)
+            else:
+                summary_bullets = "\n".join([f"- **{r[0]}**: {', '.join([str(c) for c in r[1:]])}" for r in top_rows])
+                explanation = f"{explanation}\n\nRegistros obtenidos en Capa Gold ({len(rows)} en total):\n{summary_bullets}"
+
         latency_ms = int((time.time() - start_time) * 1000)
 
         # 4. Registrar en audit.ai_executions
@@ -173,6 +232,12 @@ def query_dual_engine(user_prompt: str, db: Session) -> dict:
         logger.warning(f"[LLM_DUAL] LLM generation or execution failed ({e}). Switching to Circuit Breaker Fallback.")
         latency_ms = int((time.time() - start_time) * 1000)
         
+        # Anti-Crash Guarantee: Reset aborted PostgreSQL transaction before running fallback
+        try:
+            db.rollback()
+        except Exception as rb_err:
+            logger.warning(f"[LLM_DUAL] db.rollback() caught: {rb_err}")
+
         record_ai_execution(
             task_name="text_to_sql_chat",
             prompt_version="v1.0",

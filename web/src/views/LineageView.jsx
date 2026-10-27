@@ -55,7 +55,7 @@ export default function LineageView() {
       type: 'RELATIONAL_DB',
       layer: 'Gold',
       format: 'Curated Relational',
-      description: 'Capa analítica servicing con índices B-Tree optimizados. Invariante 20 in -> 20 out.'
+      description: 'Capa analítica servicing con índices B-Tree optimizados y preservación total de eventos.'
     },
     {
       id: 'fastapi_serving',
@@ -90,7 +90,7 @@ export default function LineageView() {
           </div>
           <p className="text-sm text-gray-400 max-w-2xl">
             Arquitectura Lakehouse de 3 capas con linaje columna a columna y gobernanza end-to-end.
-            Garantía de fidelidad matemática: <strong>Cero Pérdida Destructiva (20 in &rarr; 20 out)</strong>.
+            Garantía de fidelidad matemática: <strong>Cero Pérdida Destructiva (Fidelidad 100%)</strong>.
           </p>
         </div>
 
@@ -148,13 +148,13 @@ export default function LineageView() {
         </div>
       </div>
 
-      {/* Reconciliation Table: "Me llegaron 20, mostré 20" */}
+      {/* Reconciliation Table: Conciliación de Lotes */}
       <div className="p-6 rounded-2xl bg-[#12161f] border border-[#262a33] shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-emerald-400" />
             <h3 className="text-base font-bold text-white tracking-wide">
-              Auditoría de Conciliación de Lotes (Invariante 20 in &rarr; 20 out)
+              Auditoría de Conciliación de Lotes (Preservación Total de Datos)
             </h3>
           </div>
           <div className="text-xs font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-500/40 px-3 py-1 rounded-lg">

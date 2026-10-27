@@ -50,6 +50,7 @@ def generate_daily_executive_report(**context):
                     COUNT(*) as total_events,
                     COALESCE(MAX(magnitude), 0.0) as max_magnitude,
                     ROUND(COALESCE(AVG(magnitude), 0.0), 2) as avg_magnitude,
+                    ROUND(COALESCE(AVG(depth_km), 0.0), 2) as avg_depth_km,
                     COUNT(*) FILTER (WHERE tsunami_alert = TRUE) as tsunami_alerts_count,
                     COUNT(*) FILTER (WHERE is_anomaly = TRUE) as detected_anomalies_count
                 FROM curated.gold_earthquakes
@@ -72,6 +73,7 @@ def generate_daily_executive_report(**context):
         total_events = int(stats["total_events"])
         max_mag = float(stats["max_magnitude"])
         avg_mag = float(stats["avg_magnitude"])
+        avg_depth = float(stats["avg_depth_km"])
         tsunami_count = int(stats["tsunami_alerts_count"])
         anomalies_count = int(stats["detected_anomalies_count"])
 
@@ -81,7 +83,10 @@ def generate_daily_executive_report(**context):
             "total_events": total_events,
             "max_magnitude": max_mag,
             "avg_magnitude": avg_mag,
+            "avg_depth_km": avg_depth,
+            "tsunami_alerts": tsunami_count,
             "tsunami_alerts_count": tsunami_count,
+            "anomalies": anomalies_count,
             "detected_anomalies_count": anomalies_count
         }
         logger.info(f"[AI-REPORT] Ground Truth Metrics: {verified_metrics}")
@@ -215,17 +220,17 @@ def generate_daily_executive_report(**context):
 with DAG(
     dag_id="dag_daily_ai_report",
     default_args=default_args,
-    description="Síntesis ejecutiva diaria con IA generativa y validación matemática estricta",
+    description="[Capa Gold / Serving] Síntesis ejecutiva diaria con IA generativa y validación matemática estricta",
     schedule_interval="@daily",
     start_date=datetime(2026, 10, 1),
     catchup=False,
     max_active_runs=1,
-    tags=["ia", "reporte", "resumen-ejecutivo", "dual-engine"],
+    tags=["capa-gold", "serving-layer", "ia-analitica", "resumen-ejecutivo"],
     doc_md=DOC_MD
 ) as dag:
 
     report_task = PythonOperator(
-        task_id="generate_daily_executive_report",
+        task_id="gold__generate_daily_executive_report",
         python_callable=generate_daily_executive_report,
         provide_context=True
     )

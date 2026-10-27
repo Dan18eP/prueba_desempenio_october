@@ -152,17 +152,17 @@ def fetch_and_store_bronze(**context):
 with DAG(
     dag_id="dag_usgs_ingest",
     default_args=default_args,
-    description="Ingesta continua cada 5 min de sismos USGS hacia MinIO Bronze",
+    description="[Capa Bronze] Ingesta continua cada 5 min de sismos USGS hacia MinIO Bronze",
     schedule_interval="*/5 * * * *",
     start_date=datetime(2026, 10, 1),
     catchup=False,
     max_active_runs=1,
-    tags=["ingesta", "usgs", "minio", "tiempo-real"],
+    tags=["capa-bronze", "ingesta-cruda", "minio-s3", "raw-schema"],
     doc_md=DOC_MD
 ) as dag:
 
     ingest_task = PythonOperator(
-        task_id="fetch_and_store_bronze",
+        task_id="bronze__fetch_and_store_raw",
         python_callable=fetch_and_store_bronze,
         provide_context=True
     )
@@ -171,7 +171,7 @@ with DAG(
         task_id="trigger_medallion_processing",
         trigger_dag_id="dag_medallion_processing",
         wait_for_completion=False,
-        conf={"batch_id": "{{ ti.xcom_pull(task_ids='fetch_and_store_bronze', key='batch_id') }}"}
+        conf={"batch_id": "{{ ti.xcom_pull(task_ids='bronze__fetch_and_store_raw', key='batch_id') }}"}
     )
 
     ingest_task >> trigger_transform_task

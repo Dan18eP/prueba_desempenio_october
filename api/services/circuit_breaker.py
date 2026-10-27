@@ -101,30 +101,61 @@ def execute_fallback_intent(prompt: str, db: Session, latency_ms: int = 15) -> d
 
     # Intent 3: Alerta de Tsunami
     elif "tsunami" in p:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         sql = """
-            SELECT tsunami_alert, COUNT(*) 
-            FROM curated.gold_earthquakes 
-            GROUP BY tsunami_alert;
+            SELECT magnitude, place, depth_km, severity_label, event_time_utc
+            FROM curated.gold_earthquakes
+            WHERE tsunami_alert = TRUE
+            ORDER BY magnitude DESC
+            LIMIT 5;
         """
         rows = db.execute(text(sql)).fetchall()
-        labels = ["Sin Alerta", "Alerta Tsunami"]
-        data_dict = {bool(r[0]): int(r[1]) for r in rows}
-        data = [data_dict.get(False, 0), data_dict.get(True, 0)]
+        total_tsunami = db.execute(text("SELECT COUNT(*) FROM curated.gold_earthquakes WHERE tsunami_alert = TRUE;")).scalar() or len(rows)
         
-        chart = build_declarative_chart(
-            chart_type="doughnut",
-            title="Proporción de Eventos con Alerta de Tsunami",
-            labels=labels,
-            data=data,
-            color_palette=["#4edea3", "#ef4444"]
-        )
-        tsunami_active = data[1] > 0
-        answer = f"¡ALERTA CRÍTICA: Se detectan {data[1]} evento(s) con alerta activa de tsunami!" if tsunami_active else "Situación en calma: Cero eventos con alerta de tsunami activa en las últimas 24 horas."
+        table_lines = ["\n| Magnitud | Ubicacion | Profundidad | Severidad | Fecha / Hora (UTC) |", "| :---: | :--- | :---: | :---: | :--- |"]
+        for r in rows:
+            table_lines.append(f"| **M {float(r[0]):.1f}** | {r[1]} | {float(r[2]):.1f} km | {r[3]} | {str(r[4])[:19]} |")
+            
+        answer = f"Se registran **{total_tsunami}** eventos con alerta de tsunami activa en el catalogo de la capa Gold. A continuacion se detallan los eventos mas criticos:\n" + "\n".join(table_lines)
         return {
             "answer": answer,
-            "chart": chart,
+            "chart": {"type": "none"},
             "sql_executed": sql.strip(),
-            "suggested_questions": ["Ver sismos mayores a 5.0", "Regiones más activas"],
+            "suggested_questions": ["¿Cuáles son las anomalías detectadas?", "Ver distribución por severidad", "Sismos más fuertes"],
+            "model_used": "Deterministic-Fallback-Engine (Zero-Crash)",
+            "latency_ms": latency_ms,
+            "fallback_active": True
+        }
+
+    # Intent 3.5: Anomalias Detectadas
+    elif any(k in p for k in ["anomalia", "anomalía", "anomalias", "anomalías", "enjambre"]):
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        sql = """
+            SELECT magnitude, place, depth_km, severity_label, anomaly_explanation
+            FROM curated.gold_earthquakes
+            WHERE is_anomaly = TRUE
+            ORDER BY magnitude DESC
+            LIMIT 5;
+        """
+        rows = db.execute(text(sql)).fetchall()
+        total_anomalies = db.execute(text("SELECT COUNT(*) FROM curated.gold_earthquakes WHERE is_anomaly = TRUE;")).scalar() or len(rows)
+
+        table_lines = ["\n| Magnitud | Ubicacion | Profundidad | Severidad | Criterio de Anomalia |", "| :---: | :--- | :---: | :---: | :--- |"]
+        for r in rows:
+            table_lines.append(f"| **M {float(r[0]):.1f}** | {r[1]} | {float(r[2]):.1f} km | {r[3]} | {r[4] or 'Z-Score > 2.5'} |")
+
+        answer = f"Se detectaron **{total_anomalies}** anomalias estadisticas en la capa Gold (desviacion Z-Score > 2.5 o alerta de tsunami). A continuacion se detallan los 5 eventos de mayor criticidad:\n" + "\n".join(table_lines)
+        return {
+            "answer": answer,
+            "chart": {"type": "none"},
+            "sql_executed": sql.strip(),
+            "suggested_questions": ["¿Hay sismos con alerta de tsunami?", "Ver distribución por severidad", "Sismos de las últimas 24 horas"],
             "model_used": "Deterministic-Fallback-Engine (Zero-Crash)",
             "latency_ms": latency_ms,
             "fallback_active": True
