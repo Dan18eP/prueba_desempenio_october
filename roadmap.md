@@ -90,28 +90,28 @@ Este documento sirve como el tablero de control de avance técnico para garantiz
 ---
 
 ### Fase 5: Backend FastAPI & Plataforma React JS
-- [ ] Backend FastAPI (`api/`):
-  - [ ] `api/core/security.py`: Tokens JWT (HS256), hashing passwords con bcrypt, RBAC (`viewer` vs `admin`).
-  - [ ] `api/routers/auth.py`: `POST /auth/login`.
-  - [ ] `api/routers/kpis.py`: `GET /api/kpis`, `GET /api/stats/timeseries`.
-  - [ ] `api/routers/events.py`: `GET /api/events` (paginación, filtros de severidad y región).
-  - [ ] `api/routers/stream.py`: `GET /api/stream` (SSE en tiempo real con reconexión).
-  - [ ] `api/routers/reports.py`: `GET /api/reports`, `GET /api/reports/export` (CSV y PDF/HTML).
-  - [ ] `api/routers/admin.py`: `GET /api/quality/quarantine` (Admin), `POST /api/admin/backfill`.
-  - [ ] `api/routers/chat.py`: `POST /api/chat` (Consultas en lenguaje natural + gráficos Chart.js).
-  - [ ] `api/routers/governance.py`: `GET /api/governance/lineage` (API OpenMetadata).
-- [ ] Plataforma Frontend React JS (`web/`):
-  - [ ] Dark Mode táctico inspirado en diseño de centro de comando.
-  - [ ] `Header.jsx`: Indicador SSE "EN VIVO", telemetría de servicios (MinIO/AF/PG/OM :8585), botón Backfill Admin.
-  - [ ] `TsunamiBanner.jsx`: Alerta crítica ($M \ge 6.8 \land \text{prof} \le 100\text{km}$).
-  - [ ] `KpiBar.jsx`: 5 tarjetas operativas (24h, Máx Mag, Tasa 20/20, Calidad Q, Anomalías).
-  - [ ] `ControlCenterView.jsx`: Split view 7:5 (Gráficos Chart.js y mapa ligero Leaflet + Feed SSE en vivo).
-  - [ ] `LineageView.jsx`: Grafo de linaje OpenMetadata y tabla de conciliación 20/20.
-  - [ ] `AiAgentView.jsx`: Consola conversacional con gráficos Chart.js en tiempo real y visor de reportes diarios.
-  - [ ] `GovernanceView.jsx`: Tabla de 7 reglas de calidad, visor de cuarentena (Admin) y estado de DAGs.
-  - [ ] `LoginModal.jsx`: Login rápido con 1 clic para Admin / Viewer.
-- [ ] Servicio OpenMetadata Viewer en `:8585`:
-  - [ ] Servir catálogo interactivo de linaje y API `/api/v1/lineage`.
+- [x] Backend FastAPI (`api/`):
+  - [x] `api/core/security.py`: Tokens JWT (HS256), hashing passwords con bcrypt, RBAC (`viewer` vs `admin`).
+  - [x] `api/routers/auth.py`: `POST /auth/login`.
+  - [x] `api/routers/kpis.py`: `GET /api/kpis`, `GET /api/stats/timeseries`.
+  - [x] `api/routers/events.py`: `GET /api/events` (paginación, filtros de severidad y región).
+  - [x] `api/routers/stream.py`: `GET /api/stream` (SSE en tiempo real con reconexión).
+  - [x] `api/routers/reports.py`: `GET /api/reports`, `GET /api/reports/export` (CSV y PDF/HTML).
+  - [x] `api/routers/admin.py`: `GET /api/quality/quarantine` (Admin), `POST /api/admin/backfill`.
+  - [x] `api/routers/chat.py`: `POST /api/chat` (Consultas en lenguaje natural + gráficos Chart.js).
+  - [x] `api/routers/governance.py`: `GET /api/governance/lineage` (API OpenMetadata).
+- [x] Plataforma Frontend React JS (`web/`):
+  - [x] Dark Mode táctico inspirado en diseño de centro de comando.
+  - [x] `Header.jsx`: Indicador SSE "EN VIVO", telemetría de servicios (MinIO/AF/PG/OM :8585), botón Backfill Admin.
+  - [x] `TsunamiBanner.jsx`: Alerta crítica ($M \ge 6.8 \land \text{prof} \le 100\text{km}$).
+  - [x] `KpiBar.jsx`: 5 tarjetas operativas (24h, Máx Mag, Tasa 20/20, Calidad Q, Anomalías).
+  - [x] `ControlCenterView.jsx`: Split view 7:5 (Gráficos Chart.js y mapa ligero Leaflet + Feed SSE en vivo).
+  - [x] `LineageView.jsx`: Grafo de linaje OpenMetadata y tabla de conciliación 20/20.
+  - [x] `AiAgentView.jsx`: Consola conversacional con gráficos Chart.js en tiempo real y visor de reportes diarios.
+  - [x] `GovernanceView.jsx`: Tabla de 7 reglas de calidad, visor de cuarentena (Admin) y estado de DAGs.
+  - [x] `LoginModal.jsx`: Login rápido con 1 clic para Admin / Viewer.
+- [x] Servicio OpenMetadata Viewer en `:8585`:
+  - [x] Servir catálogo interactivo de linaje y API `/api/v1/lineage`.
 
 ---
 

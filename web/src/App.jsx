@@ -1,148 +1,299 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Header from './components/Header';
+import TsunamiBanner from './components/TsunamiBanner';
+import KpiBar from './components/KpiBar';
+import LoginModal from './components/LoginModal';
+import ControlCenterView from './views/ControlCenterView';
+import LineageView from './views/LineageView';
+import AiAgentView from './views/AiAgentView';
+import GovernanceView from './views/GovernanceView';
+import { api } from './api';
+import { RefreshCw, X, Check, AlertCircle } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('control');
-  const [userRole, setUserRole] = useState('admin'); // 'admin' | 'viewer'
+  const [currentUser, setCurrentUser] = useState(() => {
+    return api.user || { username: 'admin', role: 'admin', email: 'admin@sismowatch.gov.co' };
+  });
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isBackfillModalOpen, setIsBackfillModalOpen] = useState(false);
+
+  // Operational Data State
+  const [events, setEvents] = useState([]);
+  const [kpis, setKpis] = useState(null);
+  const [timeseries, setTimeseries] = useState(null);
+  const [severityData, setSeverityData] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const [lastEventTime, setLastEventTime] = useState(null);
+
+  // Backfill modal state
+  const [backfillStart, setBackfillStart] = useState('2026-10-01');
+  const [backfillEnd, setBackfillEnd] = useState('2026-10-27');
+  const [backfillMag, setBackfillMag] = useState(4.0);
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const [backfillNotice, setBackfillNotice] = useState(null);
+
+  // Initial Data Fetch
+  useEffect(() => {
+    async function fetchInitialData() {
+      try {
+        const [kpiRes, tsRes, sevRes, evRes] = await Promise.all([
+          api.getKpis().catch(() => null),
+          api.getTimeseries().catch(() => null),
+          api.getSeverity().catch(() => null),
+          api.getEvents({ limit: 40 }).catch(() => null)
+        ]);
+
+        if (kpiRes) setKpis(kpiRes);
+        if (tsRes) setTimeseries(tsRes);
+        if (sevRes) setSeverityData(sevRes);
+        if (evRes && evRes.events) {
+          setEvents(evRes.events);
+          if (evRes.events.length > 0) {
+            setLastEventTime(evRes.events[0].event_time_utc);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching initial operational data:', err);
+      }
+    }
+
+    fetchInitialData();
+  }, []);
+
+  // Real-Time Server-Sent Events (SSE) Stream
+  useEffect(() => {
+    let eventSource = null;
+
+    try {
+      eventSource = api.createEventSource();
+
+      eventSource.addEventListener('connected', () => {
+        setIsLive(true);
+      });
+
+      eventSource.addEventListener('initial_batch', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (Array.isArray(data) && data.length > 0) {
+            setEvents(data);
+            setLastEventTime(data[0].event_time_utc);
+          }
+        } catch (e) {
+          console.error('Error parsing initial_batch:', e);
+        }
+      });
+
+      eventSource.addEventListener('earthquake_update', (event) => {
+        if (isPaused) return;
+        try {
+          const newEvent = JSON.parse(event.data);
+          setEvents((prev) => {
+            const exists = prev.some((e) => e.id === newEvent.id);
+            if (exists) return prev;
+            return [newEvent, ...prev.slice(0, 99)];
+          });
+          setLastEventTime(newEvent.event_time_utc);
+        } catch (e) {
+          console.error('Error parsing earthquake_update:', e);
+        }
+      });
+
+      eventSource.onerror = () => {
+        setIsLive(false);
+      };
+    } catch (err) {
+      console.warn('SSE connection unavailable, using polling fallback:', err);
+    }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [isPaused]);
+
+  // Check for active tsunami condition
+  const tsunamiCount = kpis?.telemetry_24h?.tsunami_alerts_active || events.filter((e) => e.tsunami_alert).length;
+  const latestTsunami = events.find((e) => e.tsunami_alert);
+
+  const handleLogout = () => {
+    api.logout();
+    setCurrentUser(null);
+  };
+
+  const handleBackfillSubmit = async (e) => {
+    e.preventDefault();
+    setBackfillLoading(true);
+    setBackfillNotice(null);
+    try {
+      const res = await api.triggerBackfill(backfillStart, backfillEnd, parseFloat(backfillMag));
+      setBackfillNotice({ type: 'success', text: res.message || 'Backfill encolado correctamente en Airflow.' });
+      setTimeout(() => {
+        setIsBackfillModalOpen(false);
+        setBackfillNotice(null);
+      }, 2500);
+    } catch (err) {
+      setBackfillNotice({ type: 'error', text: err.message });
+    } finally {
+      setBackfillLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-lowest text-on-surface">
-      {/* Tactical Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0a0e16]/90 backdrop-blur-md border-b border-[#262a33] h-16 px-6 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-indigo-400 text-3xl">radar</span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-white tracking-tight">SismoWatch</span>
-                <span className="text-[10px] bg-[#1c2028] text-indigo-300 px-1.5 py-0.5 rounded border border-[#424754]/40 font-mono">v2.4-prod</span>
-              </div>
-              <div className="text-[9px] font-mono tracking-wider text-outline uppercase font-semibold">OPERATIONAL SEISMIC INTELLIGENCE</div>
-            </div>
-          </div>
+    <div className="min-h-screen flex flex-col bg-[#0a0e16] text-[#e2e8f0]">
+      {/* Tactical Dark Mode Header */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        currentUser={currentUser}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
+        onOpenBackfill={() => setIsBackfillModalOpen(true)}
+        isLive={isLive}
+        lastEventTime={lastEventTime}
+      />
 
-          <div className="hidden xl:flex items-center gap-3 pl-6 border-l border-[#262a33] text-xs font-mono">
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-[#181c24] border border-emerald-500/30">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-emerald-400 font-medium">SSE STREAM EN VIVO</span>
-            </div>
-            <span className="text-outline">/api/stream</span>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <nav className="hidden lg:flex items-center gap-1 bg-[#181c24] p-1 rounded-xl border border-[#262a33] text-sm">
-          <button
-            onClick={() => setActiveTab('control')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${activeTab === 'control' ? 'bg-[#262a33] text-indigo-300 font-semibold shadow-inner' : 'text-on-surface-variant hover:text-white'}`}
-          >
-            Centro de Control
-          </button>
-          <button
-            onClick={() => setActiveTab('lineage')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${activeTab === 'lineage' ? 'bg-[#262a33] text-indigo-300 font-semibold shadow-inner' : 'text-on-surface-variant hover:text-white'}`}
-          >
-            Linaje de Datos
-          </button>
-          <button
-            onClick={() => setActiveTab('agent')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${activeTab === 'agent' ? 'bg-[#262a33] text-indigo-300 font-semibold shadow-inner' : 'text-on-surface-variant hover:text-white'}`}
-          >
-            Agente IA & Analítica
-          </button>
-          <button
-            onClick={() => setActiveTab('governance')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${activeTab === 'governance' ? 'bg-[#262a33] text-indigo-300 font-semibold shadow-inner' : 'text-on-surface-variant hover:text-white'}`}
-          >
-            Gobernanza & Auditoría
-          </button>
-        </nav>
-
-        {/* Right Tools & User Profile */}
-        <div className="flex items-center gap-4">
-          <div className="hidden 2xl:flex items-center gap-2 px-3 py-1 rounded bg-[#181c24] border border-[#262a33] text-xs font-mono text-outline">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>MinIO: OK</span>
-            <span className="text-gray-600">|</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>AF: Ready</span>
-            <span className="text-gray-600">|</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>OM :8585</span>
-          </div>
-
-          <div className="flex items-center gap-2 pl-4 border-l border-[#262a33]">
-            <span className="material-symbols-outlined text-gray-400">account_circle</span>
-            <div className="flex flex-col text-left">
-              <span className="text-xs font-medium text-white">Daniel Echeverria</span>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase">{userRole} RBAC</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main View Area */}
+      {/* Main Tactical Container */}
       <main className="flex-1 pt-20 px-6 pb-12 max-w-[1920px] w-full mx-auto">
-        {/* KPI Banner */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <div className="p-4 rounded-xl bg-surface-low border border-[#262a33] flex flex-col justify-between">
-            <div className="text-xs font-mono uppercase text-outline">Eventos (24h)</div>
-            <div className="text-2xl font-bold font-mono text-white my-1">142 <span className="text-xs font-sans text-gray-400">sismos</span></div>
-            <div className="text-xs font-mono text-emerald-400">+12.4% vs anterior</div>
-          </div>
+        {/* Tsunami Alert Banner (M >= 6.8 & Depth <= 100km) */}
+        <TsunamiBanner alertsCount={tsunamiCount} latestTsunamiEvent={latestTsunami} />
 
-          <div className="p-4 rounded-xl bg-surface-low border border-[#262a33] flex flex-col justify-between">
-            <div className="text-xs font-mono uppercase text-outline">Magnitud Máxima</div>
-            <div className="text-2xl font-bold font-mono text-red-400 my-1">M 7.2 <span className="text-xs font-sans text-gray-400">Oaxaca</span></div>
-            <div className="text-xs font-mono text-outline">Prof: 18.4 km</div>
-          </div>
+        {/* 5 Operational Telemetry KPI Cards */}
+        <KpiBar telemetry={kpis?.telemetry_24h} governance={kpis?.governance_and_fidelity} />
 
-          <div className="p-4 rounded-xl bg-surface-low border border-[#262a33] flex flex-col justify-between">
-            <div className="text-xs font-mono uppercase text-outline">Tasa Fidelidad</div>
-            <div className="text-2xl font-bold font-mono text-emerald-400 my-1">100.0%</div>
-            <div className="text-xs font-mono text-gray-400">20 de 20 eventos reflejados</div>
-          </div>
+        {/* Dynamic Views */}
+        {activeTab === 'control' && (
+          <ControlCenterView
+            events={events}
+            timeseries={timeseries}
+            severityData={severityData}
+            isPaused={isPaused}
+            setIsPaused={setIsPaused}
+            onSelectEvent={setSelectedEvent}
+            selectedEvent={selectedEvent}
+          />
+        )}
 
-          <div className="p-4 rounded-xl bg-surface-low border border-[#262a33] flex flex-col justify-between">
-            <div className="text-xs font-mono uppercase text-outline">Calidad Datos Q</div>
-            <div className="text-2xl font-bold font-mono text-indigo-400 my-1">99.4%</div>
-            <div className="text-xs font-mono text-gray-400">7 reglas Pandera OK</div>
-          </div>
+        {activeTab === 'lineage' && <LineageView />}
 
-          <div className="p-4 rounded-xl bg-surface-low border border-[#262a33] flex flex-col justify-between">
-            <div className="text-xs font-mono uppercase text-outline">Anomalías (Z-Score)</div>
-            <div className="text-2xl font-bold font-mono text-amber-400 my-1">3 <span className="text-xs font-sans text-gray-400">clusters</span></div>
-            <div className="text-xs font-mono text-gray-400">Z &gt; 2.5 en Ventana 24h</div>
-          </div>
-        </div>
+        {activeTab === 'agent' && <AiAgentView currentUser={currentUser} />}
 
-        {/* Content Placeholder for Phase 5 */}
-        <div className="p-8 rounded-xl bg-surface-low border border-[#262a33] text-center">
-          <span className="material-symbols-outlined text-4xl text-indigo-400 mb-2">dashboard</span>
-          <h2 className="text-xl font-bold text-white mb-2">SismoWatch React Platform Ready</h2>
-          <p className="text-sm text-gray-400 max-w-xl mx-auto">
-            Estructura base de React JS con Vite y Tailwind inicializada. En la Fase 5 se enlazarán los componentes reactivos de Chart.js, el mapa ligero Leaflet, el chatbot con Qwen 2.5 y el stream SSE en tiempo real.
-          </p>
-        </div>
+        {activeTab === 'governance' && (
+          <GovernanceView
+            currentUser={currentUser}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+          />
+        )}
       </main>
 
-      {/* Ground Truth Footer */}
-      <footer className="bg-surface-low border-t border-[#262a33] py-2 px-6 text-xs font-mono text-outline flex flex-col md:flex-row items-center justify-between gap-2">
+      {/* Ground Truth Invariant Footer */}
+      <footer className="bg-[#12161f] border-t border-[#262a33] py-2.5 px-6 text-xs font-mono text-gray-400 flex flex-col md:flex-row items-center justify-between gap-2">
         <div>
-          <span>TELEMETRY GROUND TRUTH: </span>
-          <span className="text-emerald-400 font-semibold">20 Ingeridos / 20 Publicados (Fidelidad 100%)</span>
+          <span>TELEMETRÍA GROUND TRUTH: </span>
+          <strong className="text-emerald-400 font-bold">20 Ingeridos / 20 Publicados (Fidelidad 100%)</strong>
           <span className="mx-2 text-gray-600">|</span>
-          <span className="text-indigo-400">Cero Pérdida Destructiva</span>
+          <span className="text-indigo-400">Cero Pérdida Destructiva (Cuarentena No Destructiva)</span>
           <span className="mx-2 text-gray-600">|</span>
-          <span>OpenLineage Activo</span>
+          <span className="text-gray-300">OpenLineage & Pandera ISO 25012</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Lakehouse Node Latam-1</span>
+          <span>SismoWatch SuperApp Platform &bull; Node Latam-1</span>
         </div>
       </footer>
+
+      {/* Authentication Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={(user) => setCurrentUser(user)}
+      />
+
+      {/* Admin Backfill Modal */}
+      {isBackfillModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-[#141822] border border-[#262a33] p-6 shadow-2xl relative">
+            <button
+              onClick={() => setIsBackfillModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                <RefreshCw className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Backfill Histórico USGS</h3>
+                <p className="text-xs text-gray-400">Disparo administrativo de DAG Airflow</p>
+              </div>
+            </div>
+
+            {backfillNotice && (
+              <div
+                className={`mb-4 p-3 rounded-xl border text-xs font-mono flex items-center gap-2 ${
+                  backfillNotice.type === 'error'
+                    ? 'bg-red-950/40 border-red-500/40 text-red-200'
+                    : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                }`}
+              >
+                {backfillNotice.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                <span>{backfillNotice.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleBackfillSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono uppercase text-gray-400 mb-1">Fecha Inicio (UTC)</label>
+                <input
+                  type="date"
+                  value={backfillStart}
+                  onChange={(e) => setBackfillStart(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0e16] border border-[#262a33] text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase text-gray-400 mb-1">Fecha Fin (UTC)</label>
+                <input
+                  type="date"
+                  value={backfillEnd}
+                  onChange={(e) => setBackfillEnd(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0e16] border border-[#262a33] text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase text-gray-400 mb-1">Magnitud Mínima</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={backfillMag}
+                  onChange={(e) => setBackfillMag(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0e16] border border-[#262a33] text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={backfillLoading}
+                className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold font-mono transition-colors shadow-lg disabled:opacity-50"
+              >
+                {backfillLoading ? 'Encolando en Airflow...' : 'Ejecutar Backfill'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
