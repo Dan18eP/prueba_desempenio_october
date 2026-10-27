@@ -78,14 +78,14 @@ Este documento sirve como el tablero de control de avance técnico para garantiz
 ---
 
 ### Fase 4: Motor Dual de IA & Protocolo de Gráficos Declarativos
-- [ ] Crear `api/services/llm_client.py`:
-  - [ ] Conector dual: Ollama local (`qwen2.5-coder:3b` / `1.5b`) y Gemini 1.5 Flash opcional.
-  - [ ] Fallback determinístico anti-caídas (<6s).
-- [ ] Crear `api/services/chart_protocol.py`:
-  - [ ] Generador de payloads declarativos JSON para Chart.js (`bar`, `line`, `doughnut`).
-- [ ] Crear `api/services/security_guard.py`:
-  - [ ] Función `sanitize_text_for_llm(place)` (mitigación OWASP LLM01).
-  - [ ] Validador de consultas SQL para permitir estrictamente sentencias `SELECT`.
+- [x] Crear `api/services/llm_client.py`:
+  - [x] Conector dual: Ollama local (`qwen2.5-coder:3b` / `1.5b`) y Gemini 1.5 Flash opcional.
+  - [x] Fallback determinístico anti-caídas (<6s).
+- [x] Crear `api/services/chart_protocol.py`:
+  - [x] Generador de payloads declarativos JSON para Chart.js (`bar`, `line`, `doughnut`).
+- [x] Crear `api/services/security_guard.py`:
+  - [x] Función `sanitize_text_for_llm(place)` (mitigación OWASP LLM01).
+  - [x] Validador de consultas SQL para permitir estrictamente sentencias `SELECT`.
 
 ---
 
